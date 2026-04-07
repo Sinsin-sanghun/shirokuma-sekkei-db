@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>設計・工事チーム - 部材情報DB しろくま</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sidebar-bg: #1a1f2e;
+  --sidebar-hover: #252b3d;
+  --sidebar-active: #2a3350;
+  --sidebar-text: #c8cdd8;
+  --sidebar-muted: #6b7280;
+  --accent: #e67e22;
+  --accent-light: #f39c12;
+  --sidebar-width: 230px;
+  --header-height: 56px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans JP','Segoe UI',sans-serif;
+  background: #f5f6f8;
+  color: #1a1a2e;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  height: var(--header-height);
+  background: var(--sidebar-bg);
+  border-bottom: 1px solid #2a2f40;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+}
+.header-logo {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.header-logo span {
+  color: var(--sidebar-text);
+  font-weight: 400;
+  margin-left: 8px;
+  font-size: 13px;
+}
+.header-search {
+  flex: 1;
+  max-width: 520px;
+  margin: 0 28px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.header-search svg {
+  position: absolute;
+  left: 12px;
+  color: #6b7280;
+  pointer-events: none;
+}
+.header-search input {
+  width: 100%;
+  padding: 9px 14px 9px 38px;
+  border: 1px solid #3a4055;
+  border-radius: 8px;
+  background: #232838;
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .2s;
+}
+.header-search input::placeholder { color: #6b7280; }
+.header-search input:focus { border-color: var(--accent); }
+.btn-search {
+  margin-left: 8px;
+  padding: 8px 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s;
+}
+.btn-search:hover { background: var(--accent-light); }
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.header-count {
+  color: var(--sidebar-text);
+  font-size: 12px;
+}
+.btn-admin {
+  padding: 7px 14px;
+  background: #5b21b6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-excel {
+  padding: 7px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: flex;
+  height: calc(100vh - var(--header-height));
+  margin-top: var(--header-height);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid #2a2f40;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: #3a4055; border-radius: 3px; }
+.sidebar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--sidebar-muted);
+  padding: 0 18px 10px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  padding: 9px 18px;
+  cursor: pointer;
+  transition: background .15s;
+  color: var(--sidebar-text);
+  font-size: 13px;
+  gap: 10px;
+  border-left: 3px solid transparent;
+}
+.sidebar-item:hover { background: var(--sidebar-hover); }
+.sidebar-item.active {
+  background: var(--sidebar-active);
+  border-left-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.sidebar-icon { font-size: 15px; width: 22px; text-align: center; }
+.sidebar-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-count {
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 0;
+}
+.main-title-area { display: flex; align-items: center; gap: 12px; }
+.main-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.main-count { font-size: 13px; color: #6b7280; }
+.view-toggle { display: flex; gap: 4px; }
+.btn-toggle {
+  padding: 7px 16px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #374151;
+  transition: all .15s;
+}
+.btn-toggle.active {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-color: var(--sidebar-bg);
+}
+
+/* ── TAB MENU (仕様書 / 施工マニュアル) ── */
+.tab-menu {
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px 0;
+}
+.tab-btn {
+  padding: 9px 22px;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  transition: all .2s;
+}
+.tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.tab-btn .tab-count {
+  font-size: 11px;
+  background: rgba(0,0,0,.12);
+  padding: 1px 8px;
+  border-radius: 8px;
+}
+.tab-btn.active .tab-count {
+  background: rgba(255,255,255,.25);
+}
+
+/* ── TOOLBAR (メーカーフィルタ) ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 24px;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #e5e7eb;
+}
+.toolbar-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.btn-filter {
+  padding: 5px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  color: #374151;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-filter:hover { border-color: var(--accent); color: var(--accent); }
+.btn-filter.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* ── SORT BAR ── */
+.sort-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 24px;
+  gap: 12px;
+}
+.sort-bar select {
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ── TABLE ── */
+.table-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+thead th {
+  background: #f0f1f3;
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  font-size: 12px;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+  cursor: pointer;
+}
+thead th:hover { color: var(--accent); }
+tbody tr {
+  border-bottom: 1px solid #f0f1f3;
+  transition: background .1s;
+}
+tbody tr:hover { background: #f8f9fb; }
+tbody td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+.td-num {
+  color: #9ca3af;
+  font-size: 12px;
+  width: 40px;
+  text-align: center;
+}
+.td-title {
+  color: #2563eb;
+  cursor: pointer;
+  font-weight: 500;
+}
+.td-title:hover { text-decoration: underline; }
+
+/* category tags - color-coded */
+.cat-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cat-bess { background: #dcfce7; color: #166534; }
+.cat-other { background: #fef9c3; color: #854d0e; }
+.cat-pcs { background: #dbeafe; color: #1e40af; }
+.cat-expo { background: #fce7f3; color: #9d174d; }
+.cat-solar { background: #fed7aa; color: #9a3412; }
+.cat-elec { background: #e0e7ff; color: #3730a3; }
+.cat-cert { background: #d1fae5; color: #065f46; }
+.cat-tech { background: #ede9fe; color: #5b21b6; }
+.cat-wind { background: #cffafe; color: #155e75; }
+.cat-draw { background: #f3e8ff; color: #6b21a8; }
+.cat-ems { background: #ccfbf1; color: #134e4a; }
+.cat-noise { background: #fef3c7; color: #92400e; }
+.cat-om { background: #e0f2fe; color: #075985; }
+.cat-safety { background: #fee2e2; color: #991b1b; }
+.cat-catalog { background: #f0fdf4; color: #14532d; }
+.cat-cable { background: #fae8ff; color: #86198f; }
+.cat-fence { background: #fff7ed; color: #9a3412; }
+.cat-monitor { background: #ecfeff; color: #164e63; }
+.cat-camera { background: #fdf4ff; color: #701a75; }
+.cat-battery { background: #f0f9ff; color: #0c4a6e; }
+.cat-transformer { background: #fffbeb; color: #78350f; }
+.cat-junction { background: #f8fafc; color: #334155; }
+.cat-mount { background: #f1f5f9; color: #475569; }
+.cat-experiment { background: #fafaf9; color: #57534e; }
+.cat-material { background: #fff1f2; color: #9f1239; }
+.cat-cubicle { background: #f5f3ff; color: #4c1d95; }
+.cat-grid { background: #fefce8; color: #713f12; }
+.cat-default { background: #f3f4f6; color: #374151; }
+
+.td-manufacturer {
+  color: #374151;
+  font-size: 12px;
+}
+.tag-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-weight: 500;
+}
+.td-size {
+  color: #6b7280;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.btn-open {
+  padding: 5px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-open:hover { background: var(--accent-light); }
+
+/* ── AI SEARCH FOOTER ── */
+.ai-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+}
+.ai-footer input {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+}
+.ai-footer input:focus { border-color: var(--accent); }
+.btn-ai-send {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-ai-send:hover { background: var(--accent-light); }
+
+/* ── AI Response Panel ── */
+.ai-response-panel {
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 24px;
+  background: #fffbeb;
+  display: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.ai-response-panel.show { display: block; }
+.ai-response-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.ai-response-header h4 { font-size: 13px; color: #92400e; }
+.btn-ai-close {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  font-size: 16px;
+}
+.ai-result-item {
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid #fde68a;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.ai-result-item:hover { border-color: var(--accent); }
+.ai-result-title { font-size: 13px; font-weight: 600; color: #2563eb; }
+.ai-result-meta { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+/* ── PDF MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 90vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+.modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16px;
+}
+.modal-actions { display: flex; gap: 8px; }
+.btn-modal {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn-modal:hover { opacity: .85; }
+.btn-newtab { background: #60a5fa; color: #fff; }
+.btn-translate { background: #3b82f6; color: #fff; }
+.btn-close-modal { background: #ef4444; color: #fff; }
+.modal-body { flex: 1; }
+.modal-body iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* ── CARD VIEW ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+.card {
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  border-color: var(--accent);
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card-size { font-size: 11px; color: #9ca3af; }
+.card-manufacturer { font-size: 11px; color: #6b7280; }
+
+.hide { display: none !important; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .cards { grid-template-columns: 1fr; }
+  .modal { width: 98vw; height: 95vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="header">
+  <div class="header-logo">
+    設計・工事チーム - 部材情報DB<span>しろくま</span>
+  </div>
+  <div class="header-search">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="searchInput" placeholder="タイトル・メーカー・ファイル名で検索...">
+    <button class="btn-search" id="searchBtn">検索</button>
+  </div>
+  <div class="header-right">
+    <span class="header-count" id="headerCount">68件の資料</span>
+    <button class="btn-admin">⚙️ 管理</button>
+    <button class="btn-excel" id="excelBtn">📥 Excel出力</button>
+  </div>
+</header>
+
+<!-- ── LAYOUT ── -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-title">カテゴリ</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- Title Area -->
+    <div class="main-header">
+      <div class="main-title-area">
+        <h2 class="main-title">📁 <span id="mainTitleText">すべての資料</span></h2>
+        <span class="main-count" id="mainCount">68件</span>
+      </div>
+      <div class="view-toggle">
+        <button class="btn-toggle" id="btnCard" onclick="setView('card')">🃏 カード</button>
+        <button class="btn-toggle active" id="btnTable" onclick="setView('table')">📊 テーブル</button>
+      </div>
+    </div>
+
+    <!-- Tab Menu: 仕様書 / 施工マニュアル -->
+    <div class="tab-menu">
+      <button class="tab-btn active" data-tab="all" onclick="setTab('all',this)">📂 すべて <span class="tab-count" id="tabAllCount">68</span></button>
+      <button class="tab-btn" data-tab="仕様書" onclick="setTab('仕様書',this)">📋 仕様書 <span class="tab-count" id="tabSpecCount">61</span></button>
+      <button class="tab-btn" data-tab="施工マニュアル" onclick="setTab('施工マニュアル',this)">🔧 施工マニュアル <span class="tab-count" id="tabManualCount">7</span></button>
+    </div>
+
+    <!-- Manufacturer filter -->
+    <div class="toolbar" id="toolbar">
+      <span class="toolbar-label">メーカー：</span>
+    </div>
+
+    <!-- Sort bar -->
+    <div class="sort-bar">
+      <select id="sortSelect" onchange="renderView()">
+        <option value="title">タイトル順</option>
+        <option value="size-desc">サイズ(大→小)</option>
+        <option value="size-asc">サイズ(小→大)</option>
+        <option value="category">カテゴリ順</option>
+      </select>
+    </div>
+
+    <!-- Table View -->
+    <div class="table-container" id="tableView">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>タイトル ▼</th>
+            <th style="width:170px">カテゴリ</th>
+            <th style="width:140px">メーカー</th>
+            <th style="width:80px">タグ</th>
+            <th style="width:80px">サイズ</th>
+            <th style="width:70px">PDF</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Card View -->
+    <div class="cards hide" id="cardView"></div>
+
+    <!-- AI Response Panel -->
+    <div class="ai-response-panel" id="aiPanel">
+      <div class="ai-response-header">
+        <h4>🤖 AI検索結果</h4>
+        <button class="btn-ai-close" onclick="closeAI()">✕</button>
+      </div>
+      <div id="aiResults"></div>
+    </div>
+
+    <!-- AI Search Footer -->
+    <div class="ai-footer">
+      <span style="font-size:14px">🤖</span>
+      <input type="text" id="aiInput" placeholder="AIに質問（例: 架台の仕様書は？ PCSの施工手順は？）">
+      <button class="btn-ai-send" id="aiSendBtn">送信</button>
+    </div>
+  </main>
+</div>
+
+<!-- ── PDF MODAL ── -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">PDF</div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-newtab" onclick="openNewTab()">新しいタブで開く</button>
+        <button class="btn-modal btn-translate" onclick="openTranslate()">Google翻訳で開く</button>
+        <button class="btn-modal btn-close-modal" onclick="closeModal()">閉じる</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <iframe id="pdfFrame" src=""></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  DOCUMENT DATA (68 PDFs)
+// ══════════════════════════════════════
+const docsData = [
+  {t:"納入仕様書Q.PEAK+G4.1+300(HQJST16010)",f:"納入仕様書Q.PEAK+G4.1+300(HQJST16010).pdf",r:"実験サイト/納入仕様書Q.PEAK+G4.1+300(HQJST16010).pdf",c:"実験サイト",m:"",tp:"仕様書",s:"517.8 KB",sb:530201},
+  {t:"SK6610M-300",f:"SK6610M-300 (1).pdf",r:"実験サイト/SK6610M-300 (1).pdf",c:"実験サイト",m:"",tp:"仕様書",s:"1.1 MB",sb:1114713},
+  {t:"STD50170626YI",f:"STD50170626YI (1).pdf",r:"実験サイト/STD50170626YI (1).pdf",c:"実験サイト",m:"",tp:"仕様書",s:"213.1 KB",sb:218235},
+  {t:"LG330N1W-A5 確定仕樣書 Silver",f:"20170424_LG330N1W-A5_確定仕樣書_Silver_R01 (1).pdf",r:"実験サイト/20170424_LG330N1W-A5_確定仕樣書_Silver_R01 (1).pdf",c:"実験サイト",m:"LG",tp:"仕様書",s:"924.5 KB",sb:946688},
+  {t:"日立産機油入変圧器",f:"日立産機油入変圧器.pdf",r:"5_変圧器/日立産機油入変圧器.pdf",c:"5_変圧器",m:"日立産機",tp:"仕様書",s:"6.9 MB",sb:7211975},
+  {t:"（新）ＴＲ取扱い説明書",f:"（新）ＴＲ取扱い説明書.pdf",r:"5_変圧器/（新）ＴＲ取扱い説明書.pdf",c:"5_変圧器",m:"",tp:"施工マニュアル",s:"1.9 MB",sb:1955782},
+  {t:"Weidmuller 接続箱カタログ",f:"Weidmuller-接続箱catalog.pdf",r:"3_接続箱/Weidmuller-接続箱catalog.pdf",c:"3_接続箱",m:"Weidmuller",tp:"仕様書",s:"3.0 MB",sb:3147893},
+  {t:"ブレーカ開閉回数_分電盤標準化協議会技術資料",f:"ブレーカ開閉回数_分電盤標準化協議会技術資料.pdf",r:"3_接続箱/ブレーカ開閉回数_分電盤標準化協議会技術資料.pdf",c:"3_接続箱",m:"",tp:"仕様書",s:"784.1 KB",sb:802887},
+  {t:"ブレーカ開閉回数_日東工業",f:"ブレーカ開閉回数_日東工業.pdf",r:"3_接続箱/ブレーカ開閉回数_日東工業.pdf",c:"3_接続箱",m:"日東工業",tp:"仕様書",s:"463.7 KB",sb:474841},
+  {t:"カーポート架台仕様図 Type-B 590W78セル",f:"カーポート架台仕様図-Type-B_590W78セル_rev.0_230412_営業用.pdf",r:"9_架台(野立て）/カーポート架台仕様図-Type-B_590W78セル_rev.0_230412_営業用.pdf",c:"9_架台(野立て）",m:"",tp:"仕様書",s:"241.2 KB",sb:246985},
+  {t:"Schletter 地上設置型太陽光発電システム",f:"Schletter 地上設置型太陽光発電システム.pdf",r:"9_架台(野立て）/Schletter 地上設置型太陽光発電システム.pdf",c:"9_架台(野立て）",m:"Schletter",tp:"仕様書",s:"2.2 MB",sb:2262013},
+  {t:"Schletter 屋根設置型太陽光発電システム",f:"Schletter 屋根設置型太陽光発電システム.pdf",r:"9_架台(野立て）/Schletter 屋根設置型太陽光発電システム.pdf",c:"9_架台(野立て）",m:"Schletter",tp:"仕様書",s:"1.1 MB",sb:1116161},
+  {t:"Park@Sol 太陽光駐車場",f:"Park@Sol 太陽光駐車場.pdf",r:"9_架台(野立て）/Park@Sol 太陽光駐車場.pdf",c:"9_架台(野立て）",m:"Park@Sol",tp:"仕様書",s:"2.2 MB",sb:2315851},
+  {t:"AluGrid 平屋根システム",f:"AluGrid 平屋根システム.pdf",r:"9_架台(野立て）/AluGrid 平屋根システム.pdf",c:"9_架台(野立て）",m:"AluGrid",tp:"仕様書",s:"1.3 MB",sb:1354775},
+  {t:"ZIMMERMANN 架台カタログ",f:"ZIMMERMANN_架台カタログ.pdf",r:"9_架台(野立て）/ZIMMERMANN_架台カタログ.pdf",c:"9_架台(野立て）",m:"ZIMMERMANN",tp:"仕様書",s:"3.0 MB",sb:3104723},
+  {t:"カーポート架台仕様図 Type-C 620W78セル",f:"カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf",r:"9_架台(野立て）/カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf",c:"9_架台(野立て）",m:"",tp:"仕様書",s:"228.2 KB",sb:233694},
+  {t:"コンポーネント一覧2015_16",f:"コンポーネント一覧2015_16.pdf",r:"9_架台(野立て）/コンポーネント一覧2015_16.pdf",c:"9_架台(野立て）",m:"",tp:"仕様書",s:"3.3 MB",sb:3444113},
+  {t:"カーポート架台仕様図 Type-C 620W (架台)",f:"カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf",r:"9_架台/カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf",c:"9_架台",m:"",tp:"仕様書",s:"228.2 KB",sb:233694},
+  {t:"635W Type-B 仕様図",f:"635W_Type-B_仕様図_20250123.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_仕様図_20250123.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"333.1 KB",sb:341063},
+  {t:"635W Type-B 5.2m 仕様図",f:"635W_Type-B_5.2m_仕様図_20250123.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_5.2m_仕様図_20250123.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"368.2 KB",sb:377018},
+  {t:"635W Type-B 3.6m 身障者区画 仕様図",f:"635W_Type-B_3.6m身障者区画 仕様図_20250123.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_3.6m身障者区画 仕様図_20250123.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"345.3 KB",sb:353590},
+  {t:"635W Type-C 仕様図",f:"635W_Type-C_仕様図_250204.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-C_仕様図_250204.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"280.3 KB",sb:287084},
+  {t:"635W Type-C 5.2m 仕様図",f:"635W_Type-C5.2m仕様図_20250123.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-C5.2m仕様図_20250123.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"268.1 KB",sb:274507},
+  {t:"★営業用カーポート架台仕様図(タイプB)-590W",f:"★営業用カーポート架台仕様図(タイプB)-590W78セル_rev.0_230426.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-590W78セル_rev.0_230426.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"237.1 KB",sb:242822},
+  {t:"★営業用カーポート架台仕様図(タイプB)-620W(230312)",f:"★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230312.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230312.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"232.3 KB",sb:237867},
+  {t:"★営業用カーポート架台仕様図(タイプB)-620W(230426)",f:"★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230426.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230426.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"234.6 KB",sb:240182},
+  {t:"★営業用カーポート架台仕様図(タイプB)-625W",f:"★営業用カーポート架台仕様図(タイプB)-625W_rev.0_240312.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-625W_rev.0_240312.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"270.6 KB",sb:277066},
+  {t:"★営業用カーポート架台仕様図(タイプC)-590W",f:"★営業用カーポート架台仕様図(タイプC)-590W78セル_rev.0_230426.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-590W78セル_rev.0_230426.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"211.2 KB",sb:216296},
+  {t:"★営業用カーポート架台仕様図(タイプC)-620W",f:"★営業用カーポート架台仕様図(タイプC)-620W78セル_rev.0_230426.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-620W78セル_rev.0_230426.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"222.0 KB",sb:227270},
+  {t:"★営業用カーポート架台仕様図(タイプC)-625W",f:"★営業用カーポート架台仕様図(タイプC)-625W_rev.0_240312.pdf",r:"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-625W_rev.0_240312.pdf",c:"9_架台(ｶｰﾎﾟｰﾄ）",m:"",tp:"仕様書",s:"277.3 KB",sb:283926},
+  {t:"ハゼ折板用金具MG 製品仕様書",f:"【製品仕様書】ハゼ折板用金具MGつばなし(端部、中間部)_2023.04.27 .pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/カナメ/【製品仕様書】ハゼ折板用金具MGつばなし(端部、中間部)_2023.04.27 .pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"カナメ",tp:"仕様書",s:"459.8 KB",sb:470861},
+  {t:"ハゼ折板用金具MG 施工マニュアル",f:"【施工M】ハゼ折板用金具MG(つばなし29～46mm編)_2023.09.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/カナメ/【施工M】ハゼ折板用金具MG(つばなし29～46mm編)_2023.09.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"カナメ",tp:"施工マニュアル",s:"2.2 MB",sb:2264801},
+  {t:"ハゼ式A/B AL3ソーラー金具NF 納入仕様書",f:"DS-1014-03 【納入仕様書】ハゼ式A／B（角／丸）AL3 ソーラー金具NF.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/DS-1014-03 【納入仕様書】ハゼ式A／B（角／丸）AL3 ソーラー金具NF.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"サカタ製作所",tp:"仕様書",s:"597.7 KB",sb:612032},
+  {t:"ハゼ式A/B AL3ソーラー金具NF 施工要領書",f:"◎ES1801-Y00-5 【施工要領書】ﾊｾﾞ式 A／B（角／丸）AL3 ｿｰﾗｰ金具 NF_サカタ製作所.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/◎ES1801-Y00-5 【施工要領書】ﾊｾﾞ式 A／B（角／丸）AL3 ｿｰﾗｰ金具 NF_サカタ製作所.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"サカタ製作所",tp:"施工マニュアル",s:"1.8 MB",sb:1835488},
+  {t:"ハゼ式 AL直付ソーラー金具NF 施工要領書",f:"◎ES1700-Y00-3【施工要領書】ﾊｾﾞ式 AL直付ｿｰﾗｰ金具 NF.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/◎ES1700-Y00-3【施工要領書】ﾊｾﾞ式 AL直付ｿｰﾗｰ金具 NF.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"サカタ製作所",tp:"施工マニュアル",s:"1.2 MB",sb:1304063},
+  {t:"瀧澤建設 屋根架台 設計図面 34.88kw",f:"0922設計図面—瀧澤建設(新社)屋根架台  34.88kw.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/安泰(陸屋根）/0922設計図面—瀧澤建設(新社)屋根架台  34.88kw.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"安泰",tp:"仕様書",s:"269.0 KB",sb:275402},
+  {t:"ハゼ折板屋根専用固定金具 施工マニュアル",f:"【施工マニュアル】　ハゼ折板屋根専用固定金具.pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/横浜ソーラー/【施工マニュアル】　ハゼ折板屋根専用固定金具.pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"横浜ソーラー",tp:"施工マニュアル",s:"976.3 KB",sb:999792},
+  {t:"Pro562 Universal パッキングデータシート",f:"パッキングデータシート_Pro562 Universal_Verpackungsdatenblatt(2019.07.08).pdf",r:"9_架台(屋根上クリップ,陸屋根架台）/横浜ソーラー/パッキングデータシート_Pro562 Universal_Verpackungsdatenblatt(2019.07.08).pdf",c:"9_架台(屋根上クリップ,陸屋根架台）",m:"横浜ソーラー",tp:"仕様書",s:"265.3 KB",sb:271589},
+  {t:"BB-SC384B カタログ",f:"BB-SC384Bカタログ.pdf",r:"13_監視カメラ/BB-SC384Bカタログ.pdf",c:"13_監視カメラ",m:"Panasonic",tp:"仕様書",s:"1.2 MB",sb:1280060},
+  {t:"E120D-POE 仕様書",f:"E120D-POE.pdf",r:"13_監視カメラ/E120D-POE.pdf",c:"13_監視カメラ",m:"",tp:"仕様書",s:"346.6 KB",sb:354867},
+  {t:"IPC-07w アップデート",f:"IPC-07w アップデート.pdf",r:"13_監視カメラ/IPC-07w アップデート.pdf",c:"13_監視カメラ",m:"",tp:"仕様書",s:"416.2 KB",sb:426182},
+  {t:"IPC-07w 仕様書",f:"IPC-07w 仕様書.pdf",r:"13_監視カメラ/IPC-07w 仕様書.pdf",c:"13_監視カメラ",m:"",tp:"仕様書",s:"543.1 KB",sb:556156},
+  {t:"IPC-07w 取扱説明書",f:"IPC-07w 取扱説明書.pdf",r:"13_監視カメラ/IPC-07w 取扱説明書.pdf",c:"13_監視カメラ",m:"",tp:"施工マニュアル",s:"3.1 MB",sb:3204000},
+  {t:"三菱電機 ブレンダー",f:"19-05-29 三菱電機 ブレンダー.pdf",r:"16_蓄電池関係/19-05-29 三菱電機 ブレンダー.pdf",c:"16_蓄電池関係",m:"三菱電機",tp:"仕様書",s:"843.2 KB",sb:863432},
+  {t:"WaveTech 蓄電池",f:"19-06-25 WaveTech.pdf",r:"16_蓄電池関係/19-06-25 WaveTech.pdf",c:"16_蓄電池関係",m:"WaveTech",tp:"仕様書",s:"1.1 MB",sb:1121099},
+  {t:"AFE キャビネット",f:"AFE キャビネット.pdf",r:"16_蓄電池関係/AFE キャビネット.pdf",c:"16_蓄電池関係",m:"AFE",tp:"仕様書",s:"79.3 KB",sb:81160},
+  {t:"Afterfit白老向けESS M2f 仕様書",f:"Afterfit白老向けESS_M2f 176S8P32B_仕様書v0.1 (1).pdf",r:"16_蓄電池関係/Afterfit白老向けESS_M2f 176S8P32B_仕様書v0.1 (1).pdf",c:"16_蓄電池関係",m:"Samsung SDI",tp:"仕様書",s:"3.2 MB",sb:3345672},
+  {t:"BT2 レイアウト図",f:"BT2.レイアウト図　案 (1).pdf",r:"16_蓄電池関係/BT2.レイアウト図　案 (1).pdf",c:"16_蓄電池関係",m:"",tp:"仕様書",s:"199.5 KB",sb:204247},
+  {t:"Envicool AC AIRCON MC30HDNC1A",f:"Envicool AC AIRCON MC30HDNC1A.pdf",r:"16_蓄電池関係/Envicool AC AIRCON MC30HDNC1A.pdf",c:"16_蓄電池関係",m:"Envicool",tp:"仕様書",s:"371.3 KB",sb:380181},
+  {t:"Envicool ESS Solution",f:"Envicool ESS Solution  (2).pdf",r:"16_蓄電池関係/Envicool ESS Solution  (2).pdf",c:"16_蓄電池関係",m:"Envicool",tp:"仕様書",s:"3.6 MB",sb:3731163},
+  {t:"SMA SCS 1.9MW",f:"SMA SCS1.9MW.pdf",r:"16_蓄電池関係/SMA SCS1.9MW.pdf",c:"16_蓄電池関係",m:"SMA",tp:"仕様書",s:"3.8 MB",sb:3959735},
+  {t:"Samsung SDI Product lineup M2F",f:"Samsung SDI_ Product lineup (M2F)_Afterfit (2).pdf",r:"16_蓄電池関係/Samsung SDI_ Product lineup (M2F)_Afterfit (2).pdf",c:"16_蓄電池関係",m:"Samsung SDI",tp:"仕様書",s:"5.5 MB",sb:5748685},
+  {t:"机柜方案图",f:"机柜方案图0618.pdf",r:"16_蓄電池関係/机柜方案图0618.pdf",c:"16_蓄電池関係",m:"",tp:"仕様書",s:"250.3 KB",sb:256350},
+  {t:"ファステンソーラー JRフェンス&GRフェンス 取付説明書",f:"ファステンソーラー_【取付説明書】JRフェンス&GRフェンス 0429.pdf",r:"19_フェンス/エフソル（ファステンソーラー）/ファステンソーラー_【取付説明書】JRフェンス&GRフェンス 0429.pdf",c:"19_フェンス",m:"エフソル",tp:"施工マニュアル",s:"2.4 MB",sb:2543816},
+  {t:"エフソル フェンスカタログ",f:"株式会社エフソル　フェンスカタログ.pdf",r:"19_フェンス/エフソル（ファステンソーラー）/株式会社エフソル　フェンスカタログ.pdf",c:"19_フェンス",m:"エフソル",tp:"仕様書",s:"3.8 MB",sb:3969093},
+  {t:"久野商事 パンフレット",f:"久野商事様パンフ_202508PDF版.pdf",r:"19_フェンス/久野商事/久野商事様パンフ_202508PDF版.pdf",c:"19_フェンス",m:"久野商事",tp:"仕様書",s:"7.4 MB",sb:7759973},
+  {t:"L・eye 価格表",f:"L･eye価格表_2103.pdf",r:"20_モニタリングシステム/ラプラス・システム（L・eye）/L･eye価格表_2103.pdf",c:"20_モニタリングシステム",m:"ラプラス・システム",tp:"仕様書",s:"292.6 KB",sb:299574},
+  {t:"e-WOOL防音パネルFS用 意匠オプション",f:"e-WOOL防音パネルFS用 意匠オプションのご紹介_ABC商会.pdf",r:"21_電設資材/ABC商会_吸音パネルなど/e-WOOL防音パネルFS用 意匠オプションのご紹介_ABC商会.pdf",c:"21_電設資材",m:"ABC商会",tp:"仕様書",s:"499.8 KB",sb:511831},
+  {t:"e-WOOL防音パネルシリーズ",f:"e-WOOL防音パネルシリーズ_ABC商会.pdf",r:"21_電設資材/ABC商会_吸音パネルなど/e-WOOL防音パネルシリーズ_ABC商会.pdf",c:"21_電設資材",m:"ABC商会",tp:"仕様書",s:"1.9 MB",sb:1994622},
+  {t:"吸音パネル echoGuard",f:"吸音パネルechoGuard_ABC商会.pdf",r:"21_電設資材/ABC商会_吸音パネルなど/吸音パネルechoGuard_ABC商会.pdf",c:"21_電設資材",m:"ABC商会",tp:"仕様書",s:"2.1 MB",sb:2228776},
+  {t:"新明電材 取引基本契約書",f:"【取引基本契約書】新明電材(㈱).pdf",r:"21_電設資材/新明電材/【取引基本契約書】新明電材(㈱).pdf",c:"21_電設資材",m:"新明電材",tp:"仕様書",s:"290.6 KB",sb:297565},
+  {t:"日鉄ボルテン F12G・F8T カタログ",f:"日鉄ボルテンF12G･F8Tカタログ.pdf",r:"21_電設資材/フルサト工業/日鉄ボルテンF12G･F8Tカタログ.pdf",c:"21_電設資材",m:"フルサト工業",tp:"仕様書",s:"3.2 MB",sb:3407826},
+  {t:"GE/NEブレーカ モデルチェンジ",f:"ＧＥ／ＮＥブレーカ_モデルチェンジ.pdf",r:"21_電設資材/サンテレホン/ＧＥ／ＮＥブレーカ_モデルチェンジ.pdf",c:"21_電設資材",m:"サンテレホン",tp:"仕様書",s:"5.5 MB",sb:5769504},
+  {t:"YJLV 3x150 英文規格書",f:"YJLV 3x150英文规格书7.1-3.pdf",r:"中国製IEC基準ケーブル/アルミケーブル/無錫玖開/YJLV 3x150英文规格书7.1-3.pdf",c:"中国製IEC基準ケーブル",m:"無錫玖開",tp:"仕様書",s:"478.4 KB",sb:489926},
+  {t:"Datasheet - Shenghua cable",f:"Datasheet-from shenghua cable.pdf",r:"中国製IEC基準ケーブル/アルミケーブル/上海勝華/Datasheet-from shenghua cable.pdf",c:"中国製IEC基準ケーブル",m:"上海勝華",tp:"仕様書",s:"201.0 KB",sb:205794},
+  {t:"HUAWEI蓄電池製品 梱包仕様書",f:"HUAWEI蓄電池製品_梱包仕様書_20211201.pdf",r:"4_PCS/PCS-HUAWEI/HUAWEI蓄電池製品_梱包仕様書_20211201.pdf",c:"4_PCS",m:"HUAWEI",tp:"仕様書",s:"1.7 MB",sb:1779413},
+  {t:"Smartlogger3000A 仕様一覧",f:"Smartlogger3000A-仕様一覧.pdf",r:"4_PCS/PCS-Smartlogger/Smartlogger3000A-仕様一覧.pdf",c:"4_PCS",m:"HUAWEI",tp:"仕様書",s:"248.1 KB",sb:254036},
+  {t:"富士電機 電力量計",f:"富士電機_電力量計.pdf",r:"7_連系点/富士電機_電力量計.pdf",c:"7_連系点",m:"富士電機",tp:"仕様書",s:"3.2 MB",sb:3396513},
+  {t:"カーポート架台仕様図 Type-B 590W(野立て)",f:"カーポート架台仕様図-Type-B_590W78セル_rev.0_230412_営業用.pdf",r:"9_架台(野立て）/カーポート架台仕様図-Type-B_590W78セル_rev.0_230412_営業用.pdf",c:"9_架台(野立て）",m:"",tp:"仕様書",s:"241.2 KB",sb:246985}
+];
+
+// ══════════════════════════════════════
+//  CATEGORY CONFIG
+// ══════════════════════════════════════
+const catConfig = {
+  'すべて': {icon:'📁',css:'cat-default'},
+  '3_接続箱': {icon:'🔌',label:'接続箱',css:'cat-junction'},
+  '4_PCS': {icon:'⚡',label:'PCS',css:'cat-pcs'},
+  '5_変圧器': {icon:'🔋',label:'変圧器',css:'cat-transformer'},
+  '7_連系点': {icon:'🔗',label:'連系点',css:'cat-grid'},
+  '9_架台': {icon:'🏗️',label:'架台',css:'cat-mount'},
+  '9_架台(野立て）': {icon:'🏗️',label:'架台(野立て)',css:'cat-mount'},
+  '9_架台(ｶｰﾎﾟｰﾄ）': {icon:'🅿️',label:'架台(カーポート)',css:'cat-mount'},
+  '9_架台(屋根上クリップ,陸屋根架台）': {icon:'🏠',label:'架台(屋根上)',css:'cat-mount'},
+  '13_監視カメラ': {icon:'📹',label:'監視カメラ',css:'cat-camera'},
+  '16_蓄電池関係': {icon:'🔋',label:'蓄電池関係',css:'cat-battery'},
+  '19_フェンス': {icon:'🚧',label:'フェンス',css:'cat-fence'},
+  '20_モニタリングシステム': {icon:'📡',label:'モニタリングシステム',css:'cat-monitor'},
+  '21_電設資材': {icon:'🔩',label:'電設資材',css:'cat-material'},
+  '中国製IEC基準ケーブル': {icon:'🔌',label:'中国製IECケーブル',css:'cat-cable'},
+  '実験サイト': {icon:'🧪',label:'実験サイト',css:'cat-experiment'}
+};
+
+function getCatLabel(c) { return catConfig[c]?.label || c.replace(/^\d+_/,''); }
+function getCatIcon(c) { return catConfig[c]?.icon || '📄'; }
+function getCatCss(c) { return catConfig[c]?.css || 'cat-default'; }
+
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+let state = {
+  tab: 'all',       // 'all' | '仕様書' | '施工マニュアル'
+  category: 'すべて',
+  manufacturer: 'すべて',
+  search: '',
+  sort: 'title',
+  view: 'table'     // 'table' | 'card'
+};
+let currentPdfPath = '';
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  buildSidebar();
+  buildToolbar();
+  renderView();
+  updateCounts();
+
+  document.getElementById('searchBtn').onclick = () => {
+    state.search = document.getElementById('searchInput').value;
+    state.category = 'すべて';
+    state.manufacturer = 'すべて';
+    buildSidebar(); buildToolbar(); renderView();
+  };
+  document.getElementById('searchInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') document.getElementById('searchBtn').click();
+  });
+  document.getElementById('aiSendBtn').onclick = performAI;
+  document.getElementById('aiInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') performAI();
+  });
+});
+
+// ══════════════════════════════════════
+//  FILTERING
+// ══════════════════════════════════════
+function getFiltered() {
+  let d = [...docsData];
+  // Tab filter
+  if (state.tab !== 'all') d = d.filter(x => x.tp === state.tab);
+  // Category filter
+  if (state.category !== 'すべて') d = d.filter(x => x.c === state.category);
+  // Manufacturer filter
+  if (state.manufacturer !== 'すべて') d = d.filter(x => x.m === state.manufacturer);
+  // Search
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    d = d.filter(x => x.t.toLowerCase().includes(q) || x.c.toLowerCase().includes(q) || x.m.toLowerCase().includes(q) || x.f.toLowerCase().includes(q));
+  }
+  // Sort
+  switch(state.sort) {
+    case 'title': d.sort((a,b) => a.t.localeCompare(b.t,'ja')); break;
+    case 'size-desc': d.sort((a,b) => b.sb - a.sb); break;
+    case 'size-asc': d.sort((a,b) => a.sb - b.sb); break;
+    case 'category': d.sort((a,b) => a.c.localeCompare(b.c,'ja')); break;
+  }
+  return d;
+}
+
+// ══════════════════════════════════════
+//  SIDEBAR
+// ══════════════════════════════════════
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '<div class="sidebar-title">カテゴリ</div>';
+  let data = [...docsData];
+  if (state.tab !== 'all') data = data.filter(x => x.tp === state.tab);
+
+  const cats = new Map();
+  data.forEach(d => cats.set(d.c, (cats.get(d.c)||0)+1));
+  const total = data.length;
+
+  // All
+  const allItem = mkSidebarItem('すべて', getCatIcon('すべて'), 'すべて', total);
+  sb.appendChild(allItem);
+
+  // Sort categories
+  const sorted = [...cats.entries()].sort((a,b) => b[1] - a[1]);
+  sorted.forEach(([cat, count]) => {
+    sb.appendChild(mkSidebarItem(getCatLabel(cat), getCatIcon(cat), cat, count));
+  });
+}
+
+function mkSidebarItem(label, icon, catKey, count) {
+  const div = document.createElement('div');
+  div.className = 'sidebar-item' + (state.category === catKey ? ' active' : '');
+  div.innerHTML = `<span class="sidebar-icon">${icon}</span><span class="sidebar-label">${label}</span><span class="sidebar-count">${count}</span>`;
+  div.onclick = () => {
+    state.category = catKey;
+    state.manufacturer = 'すべて';
+    buildSidebar(); buildToolbar(); renderView();
+  };
+  return div;
+}
+
+// ══════════════════════════════════════
+//  TOOLBAR (MANUFACTURER FILTER)
+// ══════════════════════════════════════
+function buildToolbar() {
+  const tb = document.getElementById('toolbar');
+  tb.innerHTML = '<span class="toolbar-label">メーカー：</span>';
+  let data = [...docsData];
+  if (state.tab !== 'all') data = data.filter(x => x.tp === state.tab);
+  if (state.category !== 'すべて') data = data.filter(x => x.c === state.category);
+
+  const mfgs = new Map();
+  data.forEach(d => { if(d.m) mfgs.set(d.m, (mfgs.get(d.m)||0)+1); });
+
+  // All button
+  tb.appendChild(mkFilterBtn('すべて', 'すべて'));
+  [...mfgs.entries()].sort((a,b)=>b[1]-a[1]).forEach(([m]) => {
+    tb.appendChild(mkFilterBtn(m, m));
+  });
+}
+
+function mkFilterBtn(label, mfgKey) {
+  const btn = document.createElement('button');
+  btn.className = 'btn-filter' + (state.manufacturer === mfgKey ? ' active' : '');
+  btn.textContent = label;
+  btn.onclick = () => {
+    state.manufacturer = mfgKey;
+    buildToolbar(); renderView();
+  };
+  return btn;
+}
+
+// ══════════════════════════════════════
+//  TAB SWITCH
+// ══════════════════════════════════════
+function setTab(tab, el) {
+  state.tab = tab;
+  state.category = 'すべて';
+  state.manufacturer = 'すべて';
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  buildSidebar(); buildToolbar(); renderView(); updateCounts();
+}
+
+// ══════════════════════════════════════
+//  VIEW TOGGLE
+// ══════════════════════════════════════
+function setView(v) {
+  state.view = v;
+  document.getElementById('btnCard').classList.toggle('active', v==='card');
+  document.getElementById('btnTable').classList.toggle('active', v==='table');
+  document.getElementById('tableView').classList.toggle('hide', v!=='table');
+  document.getElementById('cardView').classList.toggle('hide', v!=='card');
+  renderView();
+}
+
+// ══════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════
+function renderView() {
+  const data = getFiltered();
+  document.getElementById('mainCount').textContent = data.length + '件';
+  document.getElementById('headerCount').textContent = data.length + '件の資料';
+  const catLabel = state.category === 'すべて' ? 'すべての資料' : getCatLabel(state.category);
+  document.getElementById('mainTitleText').textContent = catLabel;
+
+  if (state.view === 'table') renderTable(data);
+  else renderCards(data);
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  data.forEach((d, i) => {
+    const tr = document.createElement('tr');
+    const tagHtml = d.tp === '施工マニュアル' ? '<span class="tag-badge">施工M</span>' : '';
+    tr.innerHTML = `
+      <td class="td-num">${i+1}</td>
+      <td><span class="td-title" onclick="openPDF('${encodeURI(d.r)}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span></td>
+      <td><span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span></td>
+      <td class="td-manufacturer">${d.m || '–'}</td>
+      <td>${tagHtml}</td>
+      <td class="td-size">${d.s}</td>
+      <td><button class="btn-open" onclick="openPDF('${encodeURI(d.r)}','${d.t.replace(/'/g,"&#39;")}')">開く</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderCards(data) {
+  const container = document.getElementById('cardView');
+  container.innerHTML = '';
+  data.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.onclick = () => openPDF(d.r, d.t);
+    card.innerHTML = `
+      <div class="card-title">${d.t}</div>
+      <div class="card-meta">
+        <span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span>
+        <span class="card-manufacturer">${d.m || ''}</span>
+        <span class="card-size">${d.s}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function updateCounts() {
+  const all = docsData.length;
+  const specs = docsData.filter(d=>d.tp==='仕様書').length;
+  const manuals = docsData.filter(d=>d.tp==='施工マニュアル').length;
+  document.getElementById('tabAllCount').textContent = all;
+  document.getElementById('tabSpecCount').textContent = specs;
+  document.getElementById('tabManualCount').textContent = manuals;
+}
+
+// ══════════════════════════════════════
+//  PDF MODAL
+// ══════════════════════════════════════
+const SUPABASE_STORAGE = 'https://owbucmdtinvidsbfoyed.supabase.co/storage/v1/object/public/sekkei-kouji';
+
+// Mapping: relPath -> sequential Supabase filename
+const pdfMap = {
+"実験サイト/納入仕様書Q.PEAK+G4.1+300(HQJST16010).pdf":"0004.pdf",
+"実験サイト/SK6610M-300 (1).pdf":"0002.pdf",
+"実験サイト/STD50170626YI (1).pdf":"0003.pdf",
+"実験サイト/20170424_LG330N1W-A5_確定仕樣書_Silver_R01 (1).pdf":"0001.pdf",
+"5_変圧器/日立産機油入変圧器.pdf":"0109.pdf",
+"5_変圧器/（新）ＴＲ取扱い説明書.pdf":"0110.pdf",
+"3_接続箱/Weidmuller-接続箱catalog.pdf":"0431.pdf",
+"3_接続箱/ブレーカ開閉回数_分電盤標準化協議会技術資料.pdf":"0432.pdf",
+"3_接続箱/ブレーカ開閉回数_日東工業.pdf":"0433.pdf",
+"9_架台(野立て）/カーポート架台仕様図-Type-B_590W78セル_rev.0_230412_営業用.pdf":"0025.pdf",
+"9_架台(野立て）/Schletter 地上設置型太陽光発電システム.pdf":"0022.pdf",
+"9_架台(野立て）/Schletter 屋根設置型太陽光発電システム.pdf":"0023.pdf",
+"9_架台(野立て）/Park@Sol 太陽光駐車場.pdf":"0021.pdf",
+"9_架台(野立て）/AluGrid 平屋根システム.pdf":"0020.pdf",
+"9_架台(野立て）/ZIMMERMANN_架台カタログ.pdf":"0024.pdf",
+"9_架台(野立て）/カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf":"0026.pdf",
+"9_架台(野立て）/コンポーネント一覧2015_16.pdf":"0027.pdf",
+"9_架台/カーポート架台仕様図-Type-C_620W78セル_rev.0_230411_営業用.pdf":"0082.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_仕様図_20250123.pdf":"0010.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_5.2m_仕様図_20250123.pdf":"0009.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-B_3.6m身障者区画 仕様図_20250123.pdf":"0008.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-C_仕様図_250204.pdf":"0012.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/635W_Type-C5.2m仕様図_20250123.pdf":"0011.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-590W78セル_rev.0_230426.pdf":"0013.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230312.pdf":"0014.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-620W78セル_rev.0_230426.pdf":"0015.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプB)-625W_rev.0_240312.pdf":"0016.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-590W78セル_rev.0_230426.pdf":"0017.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-620W78セル_rev.0_230426.pdf":"0018.pdf",
+"9_架台(ｶｰﾎﾟｰﾄ）/OLD/★営業用カーポート架台仕様図(タイプC)-625W_rev.0_240312.pdf":"0019.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/カナメ/【製品仕様書】ハゼ折板用金具MGつばなし(端部、中間部)_2023.04.27 .pdf":"0074.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/カナメ/【施工M】ハゼ折板用金具MG(つばなし29～46mm編)_2023.09.pdf":"0073.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/DS-1014-03 【納入仕様書】ハゼ式A／B（角／丸）AL3 ソーラー金具NF.pdf":"0065.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/◎ES1801-Y00-5 【施工要領書】ﾊｾﾞ式 A／B（角／丸）AL3 ｿｰﾗｰ金具 NF_サカタ製作所.pdf":"0067.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/サカタ製作所/◎ES1700-Y00-3【施工要領書】ﾊｾﾞ式 AL直付ｿｰﾗｰ金具 NF.pdf":"0066.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/安泰(陸屋根）/0922設計図面—瀧澤建設(新社)屋根架台  34.88kw.pdf":"0064.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/横浜ソーラー/【施工マニュアル】　ハゼ折板屋根専用固定金具.pdf":"0062.pdf",
+"9_架台(屋根上クリップ,陸屋根架台）/横浜ソーラー/パッキングデータシート_Pro562 Universal_Verpackungsdatenblatt(2019.07.08).pdf":"0063.pdf",
+"13_監視カメラ/BB-SC384Bカタログ.pdf":"0771.pdf",
+"13_監視カメラ/E120D-POE.pdf":"0772.pdf",
+"13_監視カメラ/IPC-07w アップデート.pdf":"0773.pdf",
+"13_監視カメラ/IPC-07w 仕様書.pdf":"0774.pdf",
+"13_監視カメラ/IPC-07w 取扱説明書.pdf":"0775.pdf",
+"16_蓄電池関係/19-05-29 三菱電機 ブレンダー.pdf":"0636.pdf",
+"16_蓄電池関係/19-06-25 WaveTech.pdf":"0637.pdf",
+"16_蓄電池関係/AFE キャビネット.pdf":"0638.pdf",
+"16_蓄電池関係/Afterfit白老向けESS_M2f 176S8P32B_仕様書v0.1 (1).pdf":"0639.pdf",
+"16_蓄電池関係/BT2.レイアウト図　案 (1).pdf":"0640.pdf",
+"16_蓄電池関係/Envicool AC AIRCON MC30HDNC1A.pdf":"0641.pdf",
+"16_蓄電池関係/Envicool ESS Solution  (2).pdf":"0642.pdf",
+"16_蓄電池関係/SMA SCS1.9MW.pdf":"0643.pdf",
+"16_蓄電池関係/Samsung SDI_ Product lineup (M2F)_Afterfit (2).pdf":"0644.pdf",
+"16_蓄電池関係/机柜方案图0618.pdf":"0645.pdf",
+"19_フェンス/エフソル（ファステンソーラー）/ファステンソーラー_【取付説明書】JRフェンス&GRフェンス 0429.pdf":"0757.pdf",
+"19_フェンス/エフソル（ファステンソーラー）/株式会社エフソル　フェンスカタログ.pdf":"0758.pdf",
+"19_フェンス/久野商事/久野商事様パンフ_202508PDF版.pdf":"0759.pdf",
+"20_モニタリングシステム/ラプラス・システム（L・eye）/L･eye価格表_2103.pdf":"0760.pdf",
+"21_電設資材/ABC商会_吸音パネルなど/e-WOOL防音パネルFS用 意匠オプションのご紹介_ABC商会.pdf":"0762.pdf",
+"21_電設資材/ABC商会_吸音パネルなど/e-WOOL防音パネルシリーズ_ABC商会.pdf":"0763.pdf",
+"21_電設資材/ABC商会_吸音パネルなど/吸音パネルechoGuard_ABC商会.pdf":"0764.pdf",
+"21_電設資材/新明電材/【取引基本契約書】新明電材(㈱).pdf":"0768.pdf",
+"21_電設資材/フルサト工業/日鉄ボルテンF12G･F8Tカタログ.pdf":"0766.pdf",
+"21_電設資材/サンテレホン/ＧＥ／ＮＥブレーカ_モデルチェンジ.pdf":"0765.pdf",
+"中国製IEC基準ケーブル/アルミケーブル/無錫玖開/YJLV 3x150英文规格书7.1-3.pdf":"0007.pdf",
+"中国製IEC基準ケーブル/アルミケーブル/上海勝華/Datasheet-from shenghua cable.pdf":"0006.pdf",
+"4_PCS/PCS-HUAWEI/HUAWEI蓄電池製品_梱包仕様書_20211201.pdf":"0434.pdf",
+"4_PCS/PCS-Smartlogger/Smartlogger3000A-仕様一覧.pdf":"0440.pdf",
+"7_連系点/富士電機_電力量計.pdf":"0770.pdf"
+};
+
+function openPDF(relPath, title) {
+  const supaFile = pdfMap[decodeURI(relPath)] || pdfMap[relPath];
+  if (supaFile) {
+    currentPdfPath = SUPABASE_STORAGE + '/' + supaFile;
+  } else {
+    currentPdfPath = SUPABASE_STORAGE + '/' + encodeURIComponent('02.部材情報/' + decodeURI(relPath));
+  }
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('pdfFrame').src = currentPdfPath;
+  document.getElementById('modalOverlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+  document.getElementById('pdfFrame').src = '';
+}
+function openNewTab() { if(currentPdfPath) window.open(currentPdfPath, '_blank'); }
+function getSupabasePdfUrl(relPath) {
+  const supaFile = pdfMap[relPath];
+  return supaFile ? SUPABASE_STORAGE + '/' + supaFile : SUPABASE_STORAGE + '/' + encodeURIComponent('02.部材情報/' + relPath);
+}
+function openTranslate() {
+  if(currentPdfPath) {
+    window.open('https://translate.google.com/translate?sl=auto&tl=ja&u=' + encodeURIComponent(currentPdfPath), '_blank');
+  }
+}
+
+// ══════════════════════════════════════
+//  AI SEARCH
+// ══════════════════════════════════════
+function performAI() {
+  const q = document.getElementById('aiInput').value.trim();
+  if (!q) return;
+  const keywords = q.toLowerCase().split(/[\s、。・,]+/).filter(k => k.length > 0);
+
+  const scored = docsData.map(d => {
+    let score = 0;
+    const tl = d.t.toLowerCase(), cl = d.c.toLowerCase(), ml = d.m.toLowerCase(), fl = d.f.toLowerCase();
+    keywords.forEach(kw => {
+      if (tl.includes(kw)) score += 4;
+      if (cl.includes(kw)) score += 3;
+      if (ml.includes(kw)) score += 2;
+      if (fl.includes(kw)) score += 1;
+    });
+    // Boost if type matches query
+    if (q.includes('施工') && d.tp === '施工マニュアル') score += 3;
+    if (q.includes('仕様') && d.tp === '仕様書') score += 2;
+    if (q.includes('マニュアル') && d.tp === '施工マニュアル') score += 3;
+    return {d, score};
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score).slice(0, 8);
+
+  const panel = document.getElementById('aiPanel');
+  const results = document.getElementById('aiResults');
+  results.innerHTML = '';
+
+  if (scored.length === 0) {
+    results.innerHTML = '<div style="padding:10px;color:#6b7280;">該当する資料が見つかりませんでした。キーワードを変えてお試しください。</div>';
+  } else {
+    results.innerHTML = `<div style="padding:4px 0 8px;font-size:12px;color:#6b7280;">「${q}」に関連する資料が ${scored.length} 件見つかりました：</div>`;
+    scored.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'ai-result-item';
+      div.onclick = () => openPDF(item.d.r, item.d.t);
+      div.innerHTML = `
+        <div class="ai-result-title">${item.d.t}</div>
+        <div class="ai-result-meta">${getCatLabel(item.d.c)} | ${item.d.m || '–'} | ${item.d.s} | ${item.d.tp}</div>
+      `;
+      results.appendChild(div);
+    });
+  }
+  panel.classList.add('show');
+}
+function closeAI() { document.getElementById('aiPanel').classList.remove('show'); }
+
+// ══════════════════════════════════════
+//  EXCEL EXPORT
+// ══════════════════════════════════════
+document.getElementById('excelBtn').addEventListener('click', () => {
+  const data = getFiltered();
+  let csv = '\uFEFF#,タイトル,カテゴリ,メーカー,タイプ,サイズ,ファイル名\n';
+  data.forEach((d,i) => {
+    csv += `${i+1},"${d.t}","${getCatLabel(d.c)}","${d.m}","${d.tp}","${d.s}","${d.f}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '部材情報DB_export.csv';
+  a.click();
+});
+</script>
+</body>
+</html>
