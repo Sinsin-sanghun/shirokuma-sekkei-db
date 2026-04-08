@@ -410,6 +410,7 @@ tbody td {
 }
 .td-date { color: #9ca3af; font-size: 12px; white-space: nowrap; }
     .card-date { color: #9ca3af; font-size: 11px; margin-left: 8px; }
+    .td-date { color: #9ca3af; font-size: 12px; white-space: nowrap; }
     .td-size {
   color: #6b7280;
   font-size: 12px;
@@ -679,6 +680,7 @@ tbody td {
             <th style="width:140px">メーカー</th>
             <th style="width:80px">タグ</th>
             <th style="width:80px">サイズ</th>
+            <th style="width:90px">更新日</th>
             <th style="width:70px">PDF</th>
           </tr>
         </thead>
@@ -848,7 +850,7 @@ tbody td {
   {t:"直流電源装置 品番",f:"0084.pdf",r:"",c:"3_接続箱",m:"",tp:"仕様書",s:"65.3 KB",sb:66918,d:"2015/04/06"},
   {t:"直流電源装置 品番",f:"0085.pdf",r:"",c:"3_接続箱",m:"",tp:"仕様書",s:"65.3 KB",sb:66862,d:"2015/04/06"},
   {t:"第三角法 尺度 日",f:"0086.pdf",r:"",c:"その他",m:"",tp:"施工マニュアル",s:"145.2 KB",sb:148670,d:"2015/01/19"},
-  {t:"!\"#$%&%'''\" !\"#$%$&'#$()\"*+,-#\"\"./.#\"0123",f:"0087.pdf",r:"",c:"その他",m:"",tp:"仕様書",s:"2.6 MB",sb:2716487,d:"2013/07/22"},
+  {t:"電力量計・電力管理用計器 - GE富士電機メーター (0087)",f:"0087.pdf",r:"",c:"その他",m:"富士電機",tp:"仕様書",s:"2.6 MB",sb:2716487,d:"2013/07/22"},
   {t:"スキャン文書 (0088)",f:"0088.pdf",r:"",c:"その他",m:"",tp:"仕様書",s:"89.0 KB",sb:91116,d:"2018/10/30"},
   {t:"株式会社アフターフィット メール - Fwd: LBSの件",f:"0089.pdf",r:"",c:"その他",m:"",tp:"仕様書",s:"1.4 MB",sb:1501271,d:"2018/11/02"},
   {t:"資料 0090",f:"0090.pdf",r:"",c:"その他",m:"",tp:"仕様書",s:"622.4 KB",sb:637340,d:"2017/01/16"},
@@ -1728,6 +1730,7 @@ function renderTable(data) {
       <td class="td-manufacturer">${d.m || '–'}</td>
       <td>${tagHtml}</td>
       <td class="td-size">${d.s}</td>
+      <td class="td-date">${d.d || "-"}</td>
       <td><button class="btn-open" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">開く</button></td>
     `;
     tbody.appendChild(tr);
