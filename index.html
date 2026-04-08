@@ -1950,6 +1950,8 @@ function openPDF(relPath, title) {
       currentPdfPath = SUPABASE_STORAGE + '/' + encodeURIComponent('02.部材情報/' + decodeURI(relPath));
     }
   }
+    // Mobile: open PDF directly in new tab for better viewing
+  if (window.innerWidth <= 768) { window.open(currentPdfPath, '_blank'); return; }
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('pdfFrame').src = currentPdfPath;
   document.getElementById('modalOverlay').classList.add('show');
