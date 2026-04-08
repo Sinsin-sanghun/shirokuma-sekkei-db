@@ -686,6 +686,16 @@ tbody td {
       .toolbar { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding-top: 0; padding-bottom: 0; margin: 0 10px; }
       .toolbar.open { max-height: 400px; overflow-y: auto; padding-top: 8px; padding-bottom: 8px; }
       .toolbar .toolbar-label { display: none; }
+    
+      
+      /* Mobile: AI chat below maker filter */
+      .toolbar-toggle { order: 3; }
+      .toolbar { order: 4; }
+      .ai-footer { order: 5; position: static; border-top: none; padding: 8px 10px; background: #1e293b; border-radius: 8px; margin: 8px 10px; }
+      .ai-footer input { background: #0f172a; border-color: #334155; color: #fff; font-size: 13px; }
+      .ai-response-panel { order: 6; }
+      .sort-bar { order: 7; }
+      .table-container { order: 8; }
     }
     
     @media (max-width: 480px) {
