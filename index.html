@@ -1,5 +1,4 @@
-<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <ht
     <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>ml lang="ja">
 <head>
@@ -696,6 +695,7 @@ tbody td {
 
 <!-- ── HEADER ── -->
 <header class="header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
   <div class="header-logo">
     設計・工事チーム - 部材情報DB<span>しろくま</span>
   </div>
@@ -715,7 +715,8 @@ tbody td {
 <div class="layout">
 
   <!-- SIDEBAR -->
-  <nav class="sidebar" id="sidebar">
+  <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+<nav class="sidebar" id="sidebar">
     <div class="sidebar-title">カテゴリ</div>
   </nav>
 
