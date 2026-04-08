@@ -1,5 +1,7 @@
-<!DOCTYPE html>
-<html lang="ja">
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <!DOCTYPE html>
+<ht
+    <button class="hamburger" onclick="toggleSidebar()">&#9776;</button>ml lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -597,11 +599,97 @@ tbody td {
 
 .hide { display: none !important; }
 
-@media (max-width: 768px) {
-  .sidebar { display: none; }
-  .cards { grid-template-columns: 1fr; }
-  .modal { width: 98vw; height: 95vh; }
-}
+/* ---- MOBILE RESPONSIVE ---- */
+    .hamburger { display: none; background: none; border: none; color: var(--accent); font-size: 24px; cursor: pointer; padding: 4px 8px; }
+    
+    @media (max-width: 768px) {
+      body { overflow: auto; }
+      .hamburger { display: block; }
+      
+      /* Header */
+      .header { padding: 0 10px; gap: 6px; flex-wrap: wrap; height: auto; min-height: 48px; }
+      .header-logo { font-size: 13px; white-space: nowrap; }
+      .header-logo span { display: none; }
+      .header-search { flex: 1; min-width: 120px; max-width: none; order: 10; margin: 4px 0; }
+      .header-search input { font-size: 14px; height: 36px; }
+      .header-actions { gap: 4px; }
+      .header-actions .btn-manage,
+      .header-actions .btn-excel { font-size: 11px; padding: 5px 8px; }
+      .doc-count { font-size: 11px; white-space: nowrap; }
+      
+      /* Sidebar overlay */
+      .sidebar { 
+        position: fixed; left: -260px; top: 0; bottom: 0; width: 250px;
+        z-index: 1000; transition: left 0.3s ease;
+        padding-top: 56px; overflow-y: auto;
+      }
+      .sidebar.open { left: 0; }
+      .sidebar-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+        z-index: 999;
+      }
+      .sidebar-overlay.show { display: block; }
+      
+      /* Main grid - full width */
+      .layout { display: block; }
+      .main-content, .content { margin-left: 0 !important; padding: 10px; padding-top: 10px; }
+      
+      /* Category/filter section */
+      .filter-section { padding: 8px; }
+      .doc-type-tabs { gap: 4px; flex-wrap: wrap; }
+      .doc-type-tabs button { font-size: 12px; padding: 5px 10px; }
+      
+      /* Maker filter - collapsible */
+      .maker-filter { max-height: 80px; overflow: hidden; transition: max-height 0.3s; position: relative; }
+      .maker-filter.expanded { max-height: 500px; }
+      .maker-filter-toggle { display: block; text-align: center; color: var(--accent); font-size: 12px; cursor: pointer; padding: 4px; background: var(--sidebar-bg); border-radius: 4px; margin-top: 4px; }
+      
+      /* Sort & view toggle */
+      .view-controls { flex-wrap: wrap; gap: 6px; }
+      .view-controls select { font-size: 13px; }
+      
+      /* Table view - card-like on mobile */
+      .doc-table { font-size: 12px; }
+      .doc-table thead { display: none; }
+      .doc-table tbody tr { 
+        display: flex; flex-wrap: wrap; padding: 10px; margin-bottom: 8px;
+        background: var(--sidebar-bg); border-radius: 8px; border: 1px solid #2a2f40;
+        position: relative;
+      }
+      .doc-table tbody tr td { border: none; padding: 2px 4px; }
+      .doc-table tbody tr td:first-child { display: none; }
+      .doc-table tbody tr td:nth-child(2) { 
+        flex: 0 0 100%; font-size: 14px; font-weight: 600; color: var(--accent-light);
+        padding-bottom: 6px; border-bottom: 1px solid #2a2f40; margin-bottom: 6px;
+      }
+      .doc-table tbody tr td:nth-child(3) { font-size: 11px; }
+      .doc-table tbody tr td:nth-child(4) { font-size: 11px; color: #9ca3af; }
+      .doc-table tbody tr td:nth-child(5) { font-size: 10px; }
+      .doc-table tbody tr td.td-size { font-size: 11px; color: #9ca3af; }
+      .doc-table tbody tr td.td-date { font-size: 11px; color: #9ca3af; }
+      .doc-table tbody tr td:last-child { 
+        position: absolute; right: 8px; top: 8px;
+      }
+      .doc-table tbody tr td:last-child button { font-size: 11px; padding: 4px 10px; }
+      
+      /* Card view adjustments */
+      .card-grid { grid-template-columns: 1fr !important; gap: 8px; }
+      .doc-card { padding: 12px; }
+      
+      /* AI chat bar */
+      .ai-chat { padding: 6px 10px; }
+      .ai-chat input { font-size: 13px; }
+      
+      /* Title area */
+      .section-title { font-size: 18px; }
+      .section-title span { font-size: 14px; }
+    }
+    
+    @media (max-width: 480px) {
+      .header-actions .btn-manage { display: none; }
+      .doc-type-tabs button { font-size: 11px; padding: 4px 8px; }
+      .maker-filter { max-height: 60px; }
+    }
 </style>
 </head>
 <body>
@@ -1934,7 +2022,35 @@ document.getElementById('excelBtn').addEventListener('click', () => {
   a.download = '部材情報DB_export.csv';
   a.click();
 });
-</script>
+
+  function toggleSidebar() {
+    const sb = document.querySelector('.sidebar');
+    const ov = document.querySelector('.sidebar-overlay');
+    sb.classList.toggle('open');
+    ov.classList.toggle('show');
+  }
+  // Auto-close sidebar on mobile when clicking a category
+  document.querySelectorAll('.sidebar a, .sidebar .cat-item').forEach(el => {
+    el.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar').classList.remove('open');
+        document.querySelector('.sidebar-overlay').classList.remove('show');
+      }
+    });
+  });
+  // Add maker filter toggle
+  document.addEventListener('DOMContentLoaded', () => {
+    const mf = document.querySelector('.maker-filter');
+    if (mf && window.innerWidth <= 768) {
+      const toggle = document.createElement('div');
+      toggle.className = 'maker-filter-toggle';
+      toggle.textContent = 'メーカー ▼ もっと見る';
+      toggle.onclick = () => { mf.classList.toggle('expanded'); toggle.textContent = mf.classList.contains('expanded') ? 'メーカー ▲ 閉じる' : 'メーカー ▼ もっと見る'; };
+      mf.parentNode.insertBefore(toggle, mf.nextSibling);
+    }
+  });
+  
+  </script>
 </body>
 </html>
 
