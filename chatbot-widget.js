@@ -7,24 +7,24 @@
 (function () {
   if (document.getElementById("ai-chat-bar")) return;
 
-  /* ââ Config ââ */
+  /* ── Config ── */
   const API = "/api/chat";
-  const TITLE = "\u{1F916} AIé¨æã¢ã·ã¹ã¿ã³ã";
-  const PLACEHOLDER = "AIã«è³ªåï¼ä¾: ããããã®é¨æã¯ï¼ å¨åº«ã®è©³ç´°ã¯ï¼ï¼";
-  const FOOTER_TEXT = "Claude AI ãDBãæ¤ç´¢ãã¦åç­ãã¾ãã";
+  const TITLE = "\u{1F916} AI部材アシスタント";
+  const PLACEHOLDER = "AIに質問（例: おすすめの部材は？ 在庫の詳細は？）";
+  const FOOTER_TEXT = "Claude AI がDBを検索して回答します。";
   const ACCENT = "#3b82f6";
   const ACCENT_HOVER = "#2563eb";
   const ACCENT_LIGHT = "#60a5fa";
   const ACCENT_PALE = "#93c5fd";
 
-  /* ââ Load SheetJS for Excel export ââ */
+  /* ── Load SheetJS for Excel export ── */
   if (!window.XLSX) {
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
     document.head.appendChild(s);
   }
 
-  /* ââ Styles ââ */
+  /* ── Styles ── */
   const style = document.createElement("style");
   style.textContent = `
     /* ===== Bottom Bar ===== */
@@ -92,14 +92,14 @@
 
     /* ===== Mobile: compact bar, always visible ===== */
     @media(max-width:768px){
-      /* Compact bottom bar - 1ì¤, footer ì¨ê¹ */
+      /* Compact bottom bar - 1줄, footer 숨김 */
       .ai-chat-bar{padding:6px 8px;gap:0;}
       .ai-chat-row{gap:6px;}
       .ai-chat-bar input{padding:8px 10px;font-size:13px;border-radius:6px;}
       .ai-chat-bar button{padding:8px 12px;font-size:13px;border-radius:6px;}
       .ai-chat-bar .ai-footer{display:none;}
 
-      /* íì´ì§ ì½íì¸ ê° ê²ìë°ì ì ê°ë ¤ì§ê² */
+      /* 페이지 콘텐츠가 검색바에 안 가려지게 */
       body{padding-bottom:52px !important;}
 
       /* Panel = fullscreen */
@@ -125,7 +125,7 @@
   `;
   document.head.appendChild(style);
 
-  /* ââ Bottom Bar ââ */
+  /* ── Bottom Bar ── */
   const bar = document.createElement("div");
   bar.className = "ai-chat-bar";
   bar.id = "ai-chat-bar";
@@ -133,40 +133,40 @@
     <div class="ai-chat-row">
       <input type="text" id="ai-q-input" placeholder="${PLACEHOLDER}"
              onkeydown="if(event.key==='Enter')window._aiAsk()">
-      <button onclick="window._aiAsk()">éä¿¡</button>
+      <button onclick="window._aiAsk()">送信</button>
     </div>
     <div class="ai-footer">${FOOTER_TEXT}</div>
   `;
   document.body.appendChild(bar);
 
-  /* ââ Right Panel ââ */
+  /* ── Right Panel ── */
   const panel = document.createElement("div");
   panel.className = "ai-panel";
   panel.id = "ai-panel";
   panel.innerHTML = `
     <div class="ai-panel-hdr">
       <span>${TITLE}</span>
-      <button onclick="window._aiClose()">â</button>
+      <button onclick="window._aiClose()">✕</button>
     </div>
     <div class="ai-panel-body" id="ai-panel-body">
       <div class="ai-welcome">
-        é¨æã»è³æã«é¢ããè³ªåã<br>ä¸ã®å¥åæ¬ããã©ããã
+        部材・資材に関する質問を<br>下の入力欄からどうぞ。
       </div>
     </div>
   `;
   document.body.appendChild(panel);
 
-  /* ââ Resize Handle ââ */
+  /* ── Resize Handle ── */
   const resize = document.createElement("div");
   resize.className = "ai-resize";
   document.body.appendChild(resize);
 
-  /* ââ State ââ */
+  /* ── State ── */
   let history = [];
   let isOpen = false;
   let tableCounter = 0;
 
-  /* ââ Functions ââ */
+  /* ── Functions ── */
   function openPanel() {
     if (isOpen) return;
     isOpen = true;
@@ -180,7 +180,7 @@
     document.body.classList.remove("ai-panel-open");
   }
 
-  /* ââ Parse Markdown Table ââ */
+  /* ── Parse Markdown Table ── */
   function parseMdTable(tableStr) {
     const lines = tableStr.trim().split("\n").filter(l => l.trim());
     if (lines.length < 2) return null;
@@ -197,7 +197,7 @@
     return rows.length > 0 ? { headers, rows } : null;
   }
 
-  /* ââ Build HTML Table ââ */
+  /* ── Build HTML Table ── */
   function buildTableHtml(tableData, id) {
     let html = `<div class="ai-table-wrap" id="tw-${id}">`;
     html += `<div class="ai-table-container"><table>`;
@@ -208,35 +208,35 @@
     });
     html += "</tbody></table></div></div>";
     html += `<div class="ai-excel-btns">`;
-    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="ãã¼ãã«è¡¨ç¤º/éè¡¨ç¤º">`;
+    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="テーブル表示/非表示">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>`;
-    html += `ãã¼ãã«è¡¨ç¤º</button>`;
-    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excelãã¦ã³ã­ã¼ã">`;
+    html += `テーブル表示</button>`;
+    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excelダウンロード">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
-    html += `Excel ãã¦ã³ã­ã¼ã</button>`;
+    html += `Excel ダウンロード</button>`;
     html += `</div>`;
     return html;
   }
 
-  /* ââ Toggle Table Visibility ââ */
+  /* ── Toggle Table Visibility ── */
   window._aiToggleTable = function (id) {
     const tw = document.getElementById(id);
     if (!tw) return;
     const btn = tw.nextElementSibling?.querySelector("button");
     if (tw.style.display === "none") {
       tw.style.display = "";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("ãã¼ãã«åè¡¨ç¤º", "ãã¼ãã«è¡¨ç¤º");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル再表示", "テーブル表示");
     } else {
       tw.style.display = "none";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("ãã¼ãã«è¡¨ç¤º", "ãã¼ãã«åè¡¨ç¤º");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル表示", "テーブル再表示");
     }
   };
 
-  /* ââ Download as Excel ââ */
+  /* ── Download as Excel ── */
   window._aiDownloadExcel = function (id) {
     const tw = document.getElementById(id);
     if (!tw || !window.XLSX) {
-      alert("Excelã©ã¤ãã©ãªãèª­ã¿è¾¼ã¿ä¸­ã§ããããä¸åº¦ãè©¦ããã ããã");
+      alert("Excelライブラリを読み込み中です。もう一度お試しください。");
       return;
     }
     const origDisplay = tw.style.display;
@@ -259,14 +259,14 @@
       cols.push({ wch: maxW });
     }
     ws["!cols"] = cols;
-    XLSX.utils.book_append_sheet(wb, ws, "AIæ¤ç´¢çµæ");
+    XLSX.utils.book_append_sheet(wb, ws, "AI検索結果");
     const now = new Date();
     const ts = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2);
     XLSX.writeFile(wb, "AI_result_" + ts + ".xlsx");
     tw.style.display = origDisplay;
   };
 
-  /* ââ Render Markdown with Table Detection ââ */
+  /* ── Render Markdown with Table Detection ── */
   function renderMd(text) {
     const tables = [];
     const tableRegex = /((?:^\|.+\|[ \t]*\n){2,})/gm;
@@ -318,7 +318,7 @@
     const body = document.getElementById("ai-panel-body");
     const loader = document.createElement("div");
     loader.className = "ai-loading";
-    loader.textContent = "â¦åç­ãçæä¸­";
+    loader.textContent = "…回答を生成中";
     body.appendChild(loader);
     body.scrollTop = body.scrollHeight;
 
@@ -355,7 +355,7 @@
         }
       } else {
         const data = await res.json();
-        answer = data.response || data.error || "å¿ç­ãªã";
+        answer = data.response || data.error || "応答なし";
       }
 
       loader.remove();
@@ -363,13 +363,13 @@
       history.push({ role: "assistant", content: answer });
     } catch (err) {
       loader.remove();
-      addMsg("assistant", "â ï¸ æ¥ç¶ã¨ã©ã¼: " + err.message);
+      addMsg("assistant", "⚠️ 接続エラー: " + err.message);
     }
   };
 
   window._aiClose = closePanel;
 
-  /* ââ Resize Drag (PC only) ââ */
+  /* ── Resize Drag (PC only) ── */
   let dragging = false;
   resize.addEventListener("mousedown", (e) => { dragging = true; e.preventDefault(); });
   document.addEventListener("mousemove", (e) => {
