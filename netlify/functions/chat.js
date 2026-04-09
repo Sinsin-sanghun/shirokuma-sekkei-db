@@ -176,8 +176,8 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: toolResult.error }) };
     }
 
-    // Phase 2: Make final streaming call with all tool results in context
-    const streamRes = await fetch(ANTHROPIC_API_URL, {
+    // Phase 2: Final API call (non-streaming) to get text response
+    const finalRes = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
       headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
@@ -186,20 +186,22 @@ exports.handler = async (event) => {
         system: SYSTEM_PROMPT,
         tools: TOOLS,
         messages: toolResult.messages,
-        stream: true,
       }),
     });
 
-    if (!streamRes.ok) {
-      const errText = await streamRes.text();
-      return { statusCode: streamRes.status, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: `Streaming API error: ${streamRes.status}` }) };
+    if (!finalRes.ok) {
+      const errText = await finalRes.text();
+      return { statusCode: finalRes.status, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: `API error: ${finalRes.status}` }) };
     }
+
+    const finalResult = await finalRes.json();
+    const textBlocks = (finalResult.content || []).filter(b => b.type === "text").map(b => b.text);
+    const responseText = textBlocks.join("\n") || "応答を生成できませんでした";
 
     return {
       statusCode: 200,
-      headers: { ...headers, "Content-Type": "text/event-stream", "Cache-Control": "no-cache", "Connection": "keep-alive" },
-      body: streamRes.body,
-      isBase64Encoded: false,
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ response: responseText }),
     };
   } catch (e) {
     console.error("Function error:", e);
