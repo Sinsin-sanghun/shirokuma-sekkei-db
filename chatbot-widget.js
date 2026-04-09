@@ -1,33 +1,33 @@
 /**
  * AI Chatbot Widget - shirokuma-sekkei-db
  * PC: Bottom input bar + Right side panel
- * Mobile: FAB button + Fullscreen chat panel
+ * Mobile: Compact fixed bottom bar (always visible) + Fullscreen panel
  * + Excel table view & download feature
  */
 (function () {
   if (document.getElementById("ai-chat-bar")) return;
 
-  /* ── Config ── */
+  /* ââ Config ââ */
   const API = "/api/chat";
-  const TITLE = "\u{1F916} AI部材アシスタント";
-  const PLACEHOLDER = "AIに質問（例: おすすめの部材は？ 在庫の詳細は？）";
-  const FOOTER_TEXT = "Claude AI がDBを検索して回答します。";
+  const TITLE = "\u{1F916} AIé¨æã¢ã·ã¹ã¿ã³ã";
+  const PLACEHOLDER = "AIã«è³ªåï¼ä¾: ããããã®é¨æã¯ï¼ å¨åº«ã®è©³ç´°ã¯ï¼ï¼";
+  const FOOTER_TEXT = "Claude AI ãDBãæ¤ç´¢ãã¦åç­ãã¾ãã";
   const ACCENT = "#3b82f6";
   const ACCENT_HOVER = "#2563eb";
   const ACCENT_LIGHT = "#60a5fa";
   const ACCENT_PALE = "#93c5fd";
 
-  /* ── Load SheetJS for Excel export ── */
+  /* ââ Load SheetJS for Excel export ââ */
   if (!window.XLSX) {
     const s = document.createElement("script");
     s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
     document.head.appendChild(s);
   }
 
-  /* ── Styles ── */
+  /* ââ Styles ââ */
   const style = document.createElement("style");
   style.textContent = `
-    /* ===== PC: Bottom Bar ===== */
+    /* ===== Bottom Bar ===== */
     .ai-chat-bar{position:fixed;bottom:0;left:0;right:0;z-index:9998;
       background:#0f172a;border-top:1px solid #334155;padding:12px 20px;
       display:flex;flex-direction:column;gap:4px;}
@@ -41,7 +41,7 @@
     .ai-chat-bar button:hover{background:${ACCENT_HOVER};}
     .ai-chat-bar .ai-footer{font-size:11px;color:#64748b;text-align:center;}
 
-    /* ===== PC: Right Panel ===== */
+    /* ===== Right Panel ===== */
     .ai-panel{position:fixed;top:0;right:0;bottom:0;width:400px;z-index:9997;
       background:#1e293b;border-left:1px solid #334155;display:flex;flex-direction:column;
       transform:translateX(100%);transition:transform .3s ease;}
@@ -65,16 +65,6 @@
     .ai-panel-body .ai-msg.assistant strong{color:${ACCENT_PALE};}
     .ai-panel-body .ai-loading{color:#94a3b8;padding:12px;text-align:center;}
 
-    /* ===== Mobile: Input inside panel footer ===== */
-    .ai-panel-footer{display:none;padding:10px 12px;background:#0f172a;border-top:1px solid #334155;}
-    .ai-panel-footer .ai-chat-row{display:flex;gap:6px;align-items:center;}
-    .ai-panel-footer input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #334155;
-      background:#1e293b;color:#e2e8f0;font-size:14px;outline:none;}
-    .ai-panel-footer input:focus{border-color:${ACCENT_LIGHT};}
-    .ai-panel-footer input::placeholder{color:#94a3b8;}
-    .ai-panel-footer button{padding:10px 16px;border-radius:8px;border:none;
-      background:${ACCENT};color:#fff;font-size:14px;cursor:pointer;white-space:nowrap;}
-
     /* ===== Resize handle ===== */
     .ai-resize{position:fixed;top:0;bottom:0;width:5px;right:400px;z-index:9999;
       cursor:col-resize;background:transparent;display:none;}
@@ -83,17 +73,8 @@
 
     /* Push content when panel open (PC) */
     body.ai-panel-open{margin-right:400px;transition:margin .3s ease;}
-    /* Prevent bottom content hidden behind bar (PC) */
+    /* Prevent content hidden behind bar (PC) */
     body{padding-bottom:70px !important;}
-
-    /* ===== FAB Button (hidden on PC) ===== */
-    .ai-fab{display:none;position:fixed;bottom:16px;right:16px;z-index:9998;
-      width:56px;height:56px;border-radius:50%;border:none;
-      background:${ACCENT};color:#fff;font-size:24px;cursor:pointer;
-      box-shadow:0 4px 14px rgba(59,130,246,0.5);
-      transition:transform .2s,box-shadow .2s;align-items:center;justify-content:center;}
-    .ai-fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(59,130,246,0.6);}
-    .ai-fab:active{transform:scale(0.95);}
 
     /* ===== Excel Table Styles ===== */
     .ai-table-wrap{overflow-x:auto;margin:10px 0;border-radius:6px;border:1px solid #334155;}
@@ -103,23 +84,26 @@
     .ai-table-wrap td{padding:6px 10px;border-bottom:1px solid #334155;color:#e2e8f0;}
     .ai-table-wrap tr:hover td{background:#334155;}
     .ai-table-wrap .ai-table-container{max-height:300px;overflow-y:auto;}
-
-    /* Excel Buttons */
     .ai-excel-btns{display:flex;gap:6px;margin:8px 0 4px;flex-wrap:wrap;}
     .ai-excel-btns button{padding:6px 12px;border-radius:6px;border:1px solid #334155;
       background:#1e293b;color:#e2e8f0;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;}
     .ai-excel-btns button:hover{background:#334155;border-color:${ACCENT};}
     .ai-excel-btns button svg{width:14px;height:14px;}
 
-    /* ===== Mobile: FAB mode ===== */
+    /* ===== Mobile: compact bar, always visible ===== */
     @media(max-width:768px){
-      /* Hide PC bottom bar, show FAB */
-      .ai-chat-bar{display:none !important;}
-      .ai-fab{display:flex !important;}
-      body{padding-bottom:0 !important;}
+      /* Compact bottom bar - 1ì¤, footer ì¨ê¹ */
+      .ai-chat-bar{padding:6px 8px;gap:0;}
+      .ai-chat-row{gap:6px;}
+      .ai-chat-bar input{padding:8px 10px;font-size:13px;border-radius:6px;}
+      .ai-chat-bar button{padding:8px 12px;font-size:13px;border-radius:6px;}
+      .ai-chat-bar .ai-footer{display:none;}
+
+      /* íì´ì§ ì½íì¸ ê° ê²ìë°ì ì ê°ë ¤ì§ê² */
+      body{padding-bottom:52px !important;}
 
       /* Panel = fullscreen */
-      .ai-panel{width:100vw !important;z-index:10000;}
+      .ai-panel{width:100vw !important;}
       .ai-panel-hdr{padding:10px 14px;font-size:14px;}
       .ai-panel-hdr button{font-size:18px;}
       .ai-panel-body{padding:12px;font-size:13px;line-height:1.6;}
@@ -129,9 +113,6 @@
       .ai-panel-body .ai-welcome{margin-top:20px;font-size:13px;line-height:1.6;}
       .ai-panel-body .ai-loading{font-size:13px;padding:8px;}
 
-      /* Show input inside panel footer on mobile */
-      .ai-panel-footer{display:block !important;}
-
       body.ai-panel-open{margin-right:0 !important;}
       .ai-resize{display:none !important;}
 
@@ -140,14 +121,11 @@
       .ai-table-wrap td{padding:4px 8px;}
       .ai-table-wrap .ai-table-container{max-height:250px;}
       .ai-excel-btns button{padding:5px 10px;font-size:11px;}
-
-      /* Hide FAB when panel is open */
-      body.ai-panel-open .ai-fab{display:none !important;}
     }
   `;
   document.head.appendChild(style);
 
-  /* ── PC: Bottom Bar ── */
+  /* ââ Bottom Bar ââ */
   const bar = document.createElement("div");
   bar.className = "ai-chat-bar";
   bar.id = "ai-chat-bar";
@@ -155,71 +133,45 @@
     <div class="ai-chat-row">
       <input type="text" id="ai-q-input" placeholder="${PLACEHOLDER}"
              onkeydown="if(event.key==='Enter')window._aiAsk()">
-      <button onclick="window._aiAsk()">送信</button>
+      <button onclick="window._aiAsk()">éä¿¡</button>
     </div>
     <div class="ai-footer">${FOOTER_TEXT}</div>
   `;
   document.body.appendChild(bar);
 
-  /* ── Mobile: FAB Button ── */
-  const fab = document.createElement("button");
-  fab.className = "ai-fab";
-  fab.id = "ai-fab";
-  fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`;
-  fab.onclick = function(){ openPanel(); };
-  document.body.appendChild(fab);
-
-  /* ── Right Panel (shared PC/Mobile) ── */
+  /* ââ Right Panel ââ */
   const panel = document.createElement("div");
   panel.className = "ai-panel";
   panel.id = "ai-panel";
   panel.innerHTML = `
     <div class="ai-panel-hdr">
       <span>${TITLE}</span>
-      <button onclick="window._aiClose()">✕</button>
+      <button onclick="window._aiClose()">â</button>
     </div>
     <div class="ai-panel-body" id="ai-panel-body">
       <div class="ai-welcome">
-        部材・資材に関する質問を<br>下の入力欄からどうぞ。
-      </div>
-    </div>
-    <div class="ai-panel-footer" id="ai-panel-footer">
-      <div class="ai-chat-row">
-        <input type="text" id="ai-m-input" placeholder="${PLACEHOLDER}"
-               onkeydown="if(event.key==='Enter')window._aiAsk()">
-        <button onclick="window._aiAsk()">送信</button>
+        é¨æã»è³æã«é¢ããè³ªåã<br>ä¸ã®å¥åæ¬ããã©ããã
       </div>
     </div>
   `;
   document.body.appendChild(panel);
 
-  /* ── Resize Handle ── */
+  /* ââ Resize Handle ââ */
   const resize = document.createElement("div");
   resize.className = "ai-resize";
   document.body.appendChild(resize);
 
-  /* ── State ── */
+  /* ââ State ââ */
   let history = [];
   let isOpen = false;
   let tableCounter = 0;
 
-  /* ── Functions ── */
-  function isMobile() { return window.innerWidth <= 768; }
-
-  function getInput() {
-    if (isMobile()) return document.getElementById("ai-m-input");
-    return document.getElementById("ai-q-input");
-  }
-
+  /* ââ Functions ââ */
   function openPanel() {
     if (isOpen) return;
     isOpen = true;
     panel.classList.add("vis");
     document.body.classList.add("ai-panel-open");
-    // Focus mobile input when panel opens
-    if (isMobile()) {
-      setTimeout(() => { const inp = document.getElementById("ai-m-input"); if (inp) inp.focus(); }, 350);
-    }
   }
 
   function closePanel() {
@@ -228,7 +180,7 @@
     document.body.classList.remove("ai-panel-open");
   }
 
-  /* ── Parse Markdown Table ── */
+  /* ââ Parse Markdown Table ââ */
   function parseMdTable(tableStr) {
     const lines = tableStr.trim().split("\n").filter(l => l.trim());
     if (lines.length < 2) return null;
@@ -245,7 +197,7 @@
     return rows.length > 0 ? { headers, rows } : null;
   }
 
-  /* ── Build HTML Table ── */
+  /* ââ Build HTML Table ââ */
   function buildTableHtml(tableData, id) {
     let html = `<div class="ai-table-wrap" id="tw-${id}">`;
     html += `<div class="ai-table-container"><table>`;
@@ -256,35 +208,35 @@
     });
     html += "</tbody></table></div></div>";
     html += `<div class="ai-excel-btns">`;
-    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="テーブル表示/非表示">`;
+    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="ãã¼ãã«è¡¨ç¤º/éè¡¨ç¤º">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>`;
-    html += `テーブル表示</button>`;
-    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excelダウンロード">`;
+    html += `ãã¼ãã«è¡¨ç¤º</button>`;
+    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excelãã¦ã³ã­ã¼ã">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
-    html += `Excel ダウンロード</button>`;
+    html += `Excel ãã¦ã³ã­ã¼ã</button>`;
     html += `</div>`;
     return html;
   }
 
-  /* ── Toggle Table Visibility ── */
+  /* ââ Toggle Table Visibility ââ */
   window._aiToggleTable = function (id) {
     const tw = document.getElementById(id);
     if (!tw) return;
     const btn = tw.nextElementSibling?.querySelector("button");
     if (tw.style.display === "none") {
       tw.style.display = "";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル表示", "テーブル表示");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("ãã¼ãã«åè¡¨ç¤º", "ãã¼ãã«è¡¨ç¤º");
     } else {
       tw.style.display = "none";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル表示", "テーブル再表示");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("ãã¼ãã«è¡¨ç¤º", "ãã¼ãã«åè¡¨ç¤º");
     }
   };
 
-  /* ── Download as Excel ── */
+  /* ââ Download as Excel ââ */
   window._aiDownloadExcel = function (id) {
     const tw = document.getElementById(id);
     if (!tw || !window.XLSX) {
-      alert("Excelライブラリを読み込み中です。もう一度お試しください。");
+      alert("Excelã©ã¤ãã©ãªãèª­ã¿è¾¼ã¿ä¸­ã§ããããä¸åº¦ãè©¦ããã ããã");
       return;
     }
     const origDisplay = tw.style.display;
@@ -307,14 +259,14 @@
       cols.push({ wch: maxW });
     }
     ws["!cols"] = cols;
-    XLSX.utils.book_append_sheet(wb, ws, "AI検索結果");
+    XLSX.utils.book_append_sheet(wb, ws, "AIæ¤ç´¢çµæ");
     const now = new Date();
     const ts = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2);
     XLSX.writeFile(wb, "AI_result_" + ts + ".xlsx");
     tw.style.display = origDisplay;
   };
 
-  /* ── Render Markdown with Table Detection ── */
+  /* ââ Render Markdown with Table Detection ââ */
   function renderMd(text) {
     const tables = [];
     const tableRegex = /((?:^\|.+\|[ \t]*\n){2,})/gm;
@@ -354,7 +306,7 @@
   }
 
   window._aiAsk = async function () {
-    const input = getInput();
+    const input = document.getElementById("ai-q-input");
     const msg = input.value.trim();
     if (!msg) return;
     input.value = "";
@@ -366,7 +318,7 @@
     const body = document.getElementById("ai-panel-body");
     const loader = document.createElement("div");
     loader.className = "ai-loading";
-    loader.textContent = "…回答を生成中";
+    loader.textContent = "â¦åç­ãçæä¸­";
     body.appendChild(loader);
     body.scrollTop = body.scrollHeight;
 
@@ -403,7 +355,7 @@
         }
       } else {
         const data = await res.json();
-        answer = data.response || data.error || "応答なし";
+        answer = data.response || data.error || "å¿ç­ãªã";
       }
 
       loader.remove();
@@ -411,13 +363,13 @@
       history.push({ role: "assistant", content: answer });
     } catch (err) {
       loader.remove();
-      addMsg("assistant", "⚠️ 接続エラー: " + err.message);
+      addMsg("assistant", "â ï¸ æ¥ç¶ã¨ã©ã¼: " + err.message);
     }
   };
 
   window._aiClose = closePanel;
 
-  /* ── Resize Drag (PC only) ── */
+  /* ââ Resize Drag (PC only) ââ */
   let dragging = false;
   resize.addEventListener("mousedown", (e) => { dragging = true; e.preventDefault(); });
   document.addEventListener("mousemove", (e) => {
