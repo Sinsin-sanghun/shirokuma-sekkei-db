@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+h<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --sidebar-bg: #1a1f2e;
+  --sidebar-bg: #1a1f2e;h
   --sidebar-hover: #252b3d;
   --sidebar-active: #2a3350;
   --sidebar-text: #c8cdd8;
@@ -226,8 +226,12 @@ body {
   display: flex;
   gap: 6px;
   padding: 12px 24px 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tab-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
   padding: 9px 22px;
   border: 2px solid #d1d5db;
   background: #fff;
