@@ -143,7 +143,9 @@ async function processToolUse(messages, maxIter) {
       continue;
     }
 
-    return { done: true, messages };
+    // Final text response - extract directly (no second API call needed)
+    const textBlocks = content.filter(b => b.type === "text").map(b => b.text);
+    return { done: true, response: textBlocks.join("\n") || "応答を生成できませんでした" };
   }
   return { error: "Max iterations exceeded" };
 }
@@ -169,39 +171,16 @@ exports.handler = async (event) => {
     const messages = hist.slice(-8).map(h => ({ role: h.role, content: h.content }));
     messages.push({ role: "user", content: msg });
 
-    // Phase 1: Process tool use loop (non-streaming)
-    const toolResult = await processToolUse(messages, 10);
+    const result = await processToolUse(messages, 5);
 
-    if (toolResult.error) {
-      return { statusCode: 500, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: toolResult.error }) };
+    if (result.error) {
+      return { statusCode: 500, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: result.error }) };
     }
-
-    // Phase 2: Final API call (non-streaming) to get text response
-    const finalRes = await fetch(ANTHROPIC_API_URL, {
-      method: "POST",
-      headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        tools: TOOLS,
-        messages: toolResult.messages,
-      }),
-    });
-
-    if (!finalRes.ok) {
-      const errText = await finalRes.text();
-      return { statusCode: finalRes.status, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: `API error: ${finalRes.status}` }) };
-    }
-
-    const finalResult = await finalRes.json();
-    const textBlocks = (finalResult.content || []).filter(b => b.type === "text").map(b => b.text);
-    const responseText = textBlocks.join("\n") || "応答を生成できませんでした";
 
     return {
       statusCode: 200,
       headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ response: responseText }),
+      body: JSON.stringify({ response: result.response }),
     };
   } catch (e) {
     console.error("Function error:", e);
