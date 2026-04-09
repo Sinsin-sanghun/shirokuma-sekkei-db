@@ -2,9 +2,11 @@
 // chat.js - Netlify Serverless Function
 // Claude API (Anthropic) AI Chat with Supabase DB connectivity
 // shirokuma-sekkei-db - Design & Construction Materials DB
+// v2: 타임아웃 대응 - tool use 최대 2회, 8초 안전장치
 // ============================================================
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const FUNCTION_TIMEOUT_MS = 8000; // 8초 안전장치 (Netlify 10초 제한)
 
 const SYSTEM_PROMPT = `あなたは「しろくま電力」設計・工事チームの部材情報アシスタントです。太陽光発電所の設計・施工に使用する部材・資材の検索、比較、スペック確認をサポートします。
 
@@ -35,15 +37,17 @@ desc6には「導体断面積」「定格電圧」「定格出力」「効率」
 - 必要に応じて注意点・推奨事項
 - 日本語で丁寧に回答。韓国語で質問された場合は韓国語で回答
 
-## ツール使用の効率化
-- 1回の回答に使うツール呼び出しは最大3回まで
-- 必要なデータは可能な限り1-2回の検索で取得する`;
+## ツール使用の効率化（重要）
+- **1回のツール呼び出しで必要なデータを全て取得すること**
+- ツール呼び出しは **最大1〜2回** に抑える
+- 広範囲の検索は search_materials の all フィールドを使用
+- 不要な追加検索はしない。取得データから推論で補完する`;
 
 const TOOLS = [
   { name: "search_materials", description: "資材を検索。品名,カテゴリ,メーカー,仕入先等で部分一致検索。結果にはdesc1(説明)とdesc6(スペック詳細)が含まれる。", input_schema: { type: "object", properties: { query: { type: "string", description: "検索キーワード" }, field: { type: "string", enum: ["product_name","major_category","sub_category","maker","supplier","project","all"], default: "all" }, limit: { type: "integer", default: 30 } }, required: ["query"] } },
   { name: "get_material_by_id", description: "IDで資材の全フィールドを取得", input_schema: { type: "object", properties: { id: { type: "integer" } }, required: ["id"] } },
   { name: "get_category_list", description: "大分類の一覧と各件数を取得", input_schema: { type: "object", properties: {} } },
-  { name: "get_materials_by_category", description: "指定カテゴリの資材一覧を取得", input_schema: { type: "object", properties: { category: { type: "string", description: "大分類名" }, sort_by: { type: "string", enum: ["unit_price","product_name","maker"], default: "product_name" }, limit: { type: "integer", default: 100 } }, required: ["category"] } },
+  { name: "get_materials_by_category", description: "指定カテゴリの資材一覧を取得", input_schema: { type: "object", properties: { category: { type: "string", description: "大分類名" }, sort_by: { type: "string", enum: ["unit_price","product_name","maker"], default: "product_name" }, limit: { type: "integer", default: 50 } }, required: ["category"] } },
   { name: "compare_materials", description: "2つの資材を比較。品名で指定。全フィールド(desc1,desc6含む)を返す。", input_schema: { type: "object", properties: { material_a: { type: "string" }, material_b: { type: "string" } }, required: ["material_a", "material_b"] } },
   { name: "get_suppliers", description: "仕入先一覧と取扱品目数", input_schema: { type: "object", properties: {} } },
   { name: "price_statistics", description: "指定カテゴリの価格統計（平均,最小,最大,中央値）", input_schema: { type: "object", properties: { category: { type: "string" } }, required: ["category"] } }
@@ -76,7 +80,7 @@ async function getCategoryList() {
   return data;
 }
 
-async function getMaterialsByCategory(category, sortBy = "product_name", limit = 100) {
+async function getMaterialsByCategory(category, sortBy = "product_name", limit = 50) {
   const q = encodeURIComponent(category);
   return sb(`materials?${SEL}&major_category=ilike.*${q}*&order=${sortBy}.asc.nullslast&limit=${limit}`);
 }
@@ -108,7 +112,7 @@ async function executeTool(name, input) {
     case "search_materials": return searchMaterials(input.query || "", input.field || "all", input.limit || 30);
     case "get_material_by_id": return getMaterialById(input.id || 0);
     case "get_category_list": return getCategoryList();
-    case "get_materials_by_category": return getMaterialsByCategory(input.category || "", input.sort_by || "product_name", input.limit || 100);
+    case "get_materials_by_category": return getMaterialsByCategory(input.category || "", input.sort_by || "product_name", input.limit || 50);
     case "compare_materials": return compareMaterials(input.material_a || "", input.material_b || "");
     case "get_suppliers": return getSuppliers();
     case "price_statistics": return priceStatistics(input.category || "");
@@ -116,42 +120,77 @@ async function executeTool(name, input) {
   }
 }
 
-// === Claude API: Tool use loop (non-streaming) then streaming final response ===
-async function processToolUse(messages, maxIter) {
-  for (let i = 0; i < maxIter; i++) {
+// === Claude API: Tool use loop with timeout safety ===
+async function processWithTimeout(messages, startTime) {
+  const MAX_ITER = 2; // 최대 2회로 제한 (타임아웃 방지)
+
+  for (let i = 0; i < MAX_ITER; i++) {
+    // 남은 시간 체크
+    const elapsed = Date.now() - startTime;
+    if (elapsed > FUNCTION_TIMEOUT_MS) {
+      return { error: "処理時間が長すぎるため、もう一度お試しください。質問を短くすると早く回答できます。" };
+    }
+
     const res = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
       headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages }),
     });
 
-    if (!res.ok) { const txt = await res.text(); return { error: `Claude API error ${res.status}: ${txt.slice(0, 500)}` }; }
+    if (!res.ok) { const txt = await res.text(); return { error: `Claude API error ${res.status}: ${txt.slice(0, 300)}` }; }
     const result = await res.json();
     const content = result.content || [];
 
     if (result.stop_reason === "tool_use") {
-      messages.push({ role: "assistant", content });
-      const toolResults = [];
-      for (const block of content) {
-        if (block.type === "tool_use") {
-          console.log(`[Tool] ${block.name}(${JSON.stringify(block.input).slice(0, 80)})`);
-          const output = await executeTool(block.name, block.input);
-          toolResults.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 12000) });
-        }
+      // 시간 체크 - tool 실행 전
+      if (Date.now() - startTime > FUNCTION_TIMEOUT_MS) {
+        // 시간 부족: tool 결과 없이 Claude에게 직접 답변 요청
+        messages.push({ role: "assistant", content });
+        messages.push({ role: "user", content: [{ type: "tool_result", tool_use_id: content.find(b => b.type === "tool_use")?.id || "x", content: JSON.stringify({ error: "タイムアウト - データ取得できず" }) }] });
+        continue;
       }
+
+      messages.push({ role: "assistant", content });
+
+      // 모든 tool을 병렬 실행 (속도 최적화)
+      const toolBlocks = content.filter(b => b.type === "tool_use");
+      const toolPromises = toolBlocks.map(async (block) => {
+        console.log(`[Tool] ${block.name}(${JSON.stringify(block.input).slice(0, 60)})`);
+        const output = await executeTool(block.name, block.input);
+        return { type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 10000) };
+      });
+
+      const toolResults = await Promise.all(toolPromises);
       messages.push({ role: "user", content: toolResults });
       continue;
     }
 
-    // Final text response - extract directly (no second API call needed)
+    // 최종 텍스트 응답
     const textBlocks = content.filter(b => b.type === "text").map(b => b.text);
     return { done: true, response: textBlocks.join("\n") || "応答を生成できませんでした" };
   }
-  return { error: "Max iterations exceeded" };
+
+  // MAX_ITER 초과 시 마지막으로 한번 더 텍스트 응답 시도
+  const elapsed = Date.now() - startTime;
+  if (elapsed < FUNCTION_TIMEOUT_MS) {
+    const finalRes = await fetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT + "\n\n注意: これ以上ツールは使えません。手持ちの情報で回答してください。", messages }),
+    });
+    if (finalRes.ok) {
+      const finalResult = await finalRes.json();
+      const text = (finalResult.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+      if (text) return { done: true, response: text };
+    }
+  }
+
+  return { error: "回答生成に時間がかかりすぎました。もう一度お試しください。" };
 }
 
 // === Handler ===
 exports.handler = async (event) => {
+  const startTime = Date.now();
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -168,13 +207,13 @@ exports.handler = async (event) => {
 
     if (!msg) return { statusCode: 400, headers, body: JSON.stringify({ error: "empty message" }) };
 
-    const messages = hist.slice(-8).map(h => ({ role: h.role, content: h.content }));
+    const messages = hist.slice(-6).map(h => ({ role: h.role, content: h.content }));
     messages.push({ role: "user", content: msg });
 
-    const result = await processToolUse(messages, 5);
+    const result = await processWithTimeout(messages, startTime);
 
     if (result.error) {
-      return { statusCode: 500, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: result.error }) };
+      return { statusCode: 200, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ response: "⚠️ " + result.error }) };
     }
 
     return {
@@ -184,6 +223,6 @@ exports.handler = async (event) => {
     };
   } catch (e) {
     console.error("Function error:", e);
-    return { statusCode: 500, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ error: e.message }) };
+    return { statusCode: 200, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ response: "⚠️ エラーが発生しました: " + e.message }) };
   }
 };
