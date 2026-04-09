@@ -73,6 +73,9 @@
     /* Push content when panel open */
     body.ai-panel-open{margin-right:400px;transition:margin .3s ease;}
 
+    /* Prevent bottom content from being hidden behind fixed chat bar */
+    body{padding-bottom:70px !important;}
+
     /* ── Excel Table Styles ── */
     .ai-table-wrap{overflow-x:auto;margin:10px 0;border-radius:6px;border:1px solid #334155;}
     .ai-table-wrap table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;}
@@ -91,6 +94,7 @@
 
     /* ── Mobile Responsive ── */
     @media(max-width:768px){
+      body{padding-bottom:56px !important;}
       .ai-chat-bar{padding:6px 10px;gap:2px;}
       .ai-chat-row{gap:6px;}
       .ai-chat-bar input{padding:8px 10px;font-size:13px;border-radius:6px;}
