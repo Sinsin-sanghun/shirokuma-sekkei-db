@@ -1,146 +1,213 @@
-(function(){
-'use strict';
-var CHAT_API='/.netlify/functions/chat';
-var history=[];
-var isOpen=false;
+/**
+ * AI Chatbot Widget - shirokuma-sekkei-db
+ * Bottom input bar + Right side panel design
+ */
+(function () {
+  if (document.getElementById("ai-chat-bar")) return;
 
-// Create styles
-var style=document.createElement('style');
-style.textContent='#ai-sidebar{position:fixed;top:0;right:0;width:380px;height:100vh;background:#fff;box-shadow:-2px 0 12px rgba(0,0,0,.15);z-index:9999;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;font-family:-apple-system,BlinkMacSystemFont,sans-serif}#ai-sidebar.open{transform:translateX(0)}#ai-sidebar-header{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}#ai-sidebar-header h3{margin:0;font-size:16px;font-weight:600}#ai-sidebar-close{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:4px}#ai-sidebar-close:hover{background:rgba(255,255,255,.2)}#ai-sidebar-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}.ai-msg-user{align-self:flex-end;background:#e0e7ff;color:#1e3a5f;padding:10px 14px;border-radius:16px 16px 4px 16px;max-width:85%;word-break:break-word;font-size:14px;line-height:1.5}.ai-msg-ai{align-self:flex-start;background:#f1f5f9;color:#1e293b;padding:10px 14px;border-radius:16px 16px 16px 4px;max-width:90%;word-break:break-word;font-size:14px;line-height:1.6}.ai-msg-ai p{margin:4px 0}.ai-msg-ai ul,.ai-msg-ai ol{margin:4px 0 4px 18px;padding:0}.ai-msg-ai li{margin:2px 0}.ai-msg-ai strong{font-weight:600}.ai-msg-ai code{background:#e2e8f0;padding:1px 4px;border-radius:3px;font-size:13px}#ai-sidebar-input-area{border-top:1px solid #e2e8f0;padding:12px;display:flex;gap:8px;flex-shrink:0;background:#f8fafc}#ai-sidebar-input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:10px 16px;font-size:14px;outline:none;resize:none}#ai-sidebar-input:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.2)}#ai-sidebar-send{background:#2563eb;color:#fff;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}#ai-sidebar-send:hover{background:#1d4ed8}#ai-sidebar-send:disabled{background:#94a3b8;cursor:not-allowed}#ai-toggle-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:50px;padding:14px 22px;font-size:15px;font-weight:600;cursor:pointer;z-index:9998;box-shadow:0 4px 14px rgba(37,99,235,.4);display:flex;align-items:center;gap:8px;transition:all .2s}#ai-toggle-btn:hover{transform:scale(1.05);box-shadow:0 6px 20px rgba(37,99,235,.5)}#ai-toggle-btn.hidden{display:none}.ai-welcome{text-align:center;color:#64748b;padding:40px 20px;font-size:14px;line-height:1.6}.ai-welcome-icon{font-size:40px;margin-bottom:12px}.ai-typing{color:#64748b;font-style:italic;font-size:13px;padding:8px 14px}.ai-typing::after{content:"...";animation:dots 1.2s infinite}@keyframes dots{0%,20%{content:"."}40%{content:".."}60%,100%{content:"..."}}';
-document.head.appendChild(style);
+  /* ── Config ── */
+  const API = "/api/chat";
+  const TITLE = "\u{1F916} AI\u90E8\u6750\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8";
+  const PLACEHOLDER = "AI\u306B\u8CEA\u554F\uFF08\u4F8B: \u304A\u3059\u3059\u3081\u306E\u90E8\u6750\u306F\uFF1F \u5728\u5EAB\u306E\u8A73\u7D30\u306F\uFF1F\uFF09";
+  const FOOTER_TEXT = "Claude AI \u304CDB\u3092\u691C\u7D22\u3057\u3066\u56DE\u7B54\u3057\u307E\u3059\u3002";
 
-// Create toggle button
-var toggleBtn=document.createElement('button');
-toggleBtn.id='ai-toggle-btn';
-toggleBtn.innerHTML='\ud83e\udd16 AI\u30c1\u30e3\u30c3\u30c8';
-document.body.appendChild(toggleBtn);
+  /* ── Styles ── */
+  const style = document.createElement("style");
+  style.textContent = `
+    /* Bottom Bar */
+    .ai-chat-bar{position:fixed;bottom:0;left:0;right:0;z-index:9998;
+      background:#0f172a;border-top:1px solid #334155;padding:12px 20px;
+      display:flex;flex-direction:column;gap:4px;}
+    .ai-chat-row{display:flex;gap:8px;align-items:center;}
+    .ai-chat-bar input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid #334155;
+      background:#1e293b;color:#e2e8f0;font-size:14px;outline:none;}
+    .ai-chat-bar input:focus{border-color:#60a5fa;}
+    .ai-chat-bar input::placeholder{color:#94a3b8;}
+    .ai-chat-bar button{padding:10px 20px;border-radius:8px;border:none;
+      background:#3b82f6;color:#fff;font-size:14px;cursor:pointer;white-space:nowrap;}
+    .ai-chat-bar button:hover{background:#2563eb;}
+    .ai-chat-bar .ai-footer{font-size:11px;color:#64748b;text-align:center;}
 
-// Create sidebar
-var sidebar=document.createElement('div');
-sidebar.id='ai-sidebar';
-sidebar.innerHTML='<div id="ai-sidebar-header"><h3>\ud83e\udd16 AI\u90e8\u6750\u30a2\u30b7\u30b9\u30bf\u30f3\u30c8</h3><button id="ai-sidebar-close">\u2715</button></div>'+'<div id="ai-sidebar-messages"><div class="ai-welcome"><div class="ai-welcome-icon">\ud83d\udcac</div>\u90e8\u6750\u30fb\u8a2d\u8a08\u306b\u95a2\u3059\u308b\u8cea\u554f\u3092\u3069\u3046\u305e<br><span style="color:#94a3b8;font-size:13px">\u4f8b: \u300c\u67b6\u53f0\u306e\u5728\u5eab\u72b6\u6cc1\u306f\uff1f\u300d</span></div></div>'+'<div id="ai-sidebar-input-area"><input id="ai-sidebar-input" type="text" placeholder="\u8cea\u554f\u3092\u5165\u529b..." /><button id="ai-sidebar-send">\u27a4</button></div>';
-document.body.appendChild(sidebar);
+    /* Right Panel */
+    .ai-panel{position:fixed;top:0;right:0;bottom:0;width:400px;z-index:9997;
+      background:#1e293b;border-left:1px solid #334155;display:flex;flex-direction:column;
+      transform:translateX(100%);transition:transform .3s ease;}
+    .ai-panel.vis{transform:translateX(0);}
+    .ai-panel-hdr{display:flex;justify-content:space-between;align-items:center;
+      padding:14px 18px;background:#0f172a;color:#e2e8f0;font-weight:700;font-size:15px;
+      border-bottom:1px solid #334155;}
+    .ai-panel-hdr button{background:none;border:none;color:#94a3b8;font-size:20px;
+      cursor:pointer;line-height:1;}
+    .ai-panel-hdr button:hover{color:#e2e8f0;}
+    .ai-panel-body{flex:1;overflow-y:auto;padding:18px;color:#e2e8f0;font-size:14px;
+      line-height:1.7;}
+    .ai-panel-body .ai-welcome{color:#94a3b8;margin-top:40px;text-align:center;line-height:1.9;}
+    .ai-panel-body .ai-msg{margin-bottom:16px;padding:12px;border-radius:8px;}
+    .ai-panel-body .ai-msg.user{background:#334155;text-align:right;}
+    .ai-panel-body .ai-msg.assistant{background:#0f172a;}
+    .ai-panel-body .ai-msg.assistant h3{color:#60a5fa;font-size:14px;margin:12px 0 4px;}
+    .ai-panel-body .ai-msg.assistant ul{margin:4px 0 4px 18px;}
+    .ai-panel-body .ai-msg.assistant li{margin:2px 0;}
+    .ai-panel-body .ai-msg.assistant code{background:#334155;padding:1px 5px;border-radius:3px;font-size:13px;}
+    .ai-panel-body .ai-msg.assistant strong{color:#93c5fd;}
+    .ai-panel-body .ai-loading{color:#94a3b8;padding:12px;text-align:center;}
 
-// Toggle sidebar
-toggleBtn.addEventListener('click',function(){sidebar.classList.add('open');toggleBtn.classList.add('hidden');isOpen=true;document.getElementById('ai-sidebar-input').focus();});
-document.getElementById('ai-sidebar-close').addEventListener('click',function(){sidebar.classList.remove('open');toggleBtn.classList.remove('hidden');isOpen=false;});
+    /* Resize handle */
+    .ai-resize{position:fixed;top:0;bottom:0;width:5px;right:400px;z-index:9999;
+      cursor:col-resize;background:transparent;display:none;}
+    .ai-panel.vis~.ai-resize{display:block;}
+    .ai-resize:hover{background:#334155;}
 
-// Markdown helper
-function md(t){
-  t=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-  t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
-  t=t.replace(/^### (.+)$/gm,'<strong style="font-size:15px">$1</strong>');
-  t=t.replace(/^## (.+)$/gm,'<strong style="font-size:16px">$1</strong>');
-  t=t.replace(/^[\-\*] (.+)$/gm,'<li>$1</li>');
-  t=t.replace(/(<li>.*<\/li>)/gs,'<ul>$1</ul>');
-  t=t.replace(/<\/ul>\s*<ul>/g,'');
-  t=t.replace(/\n\n/g,'</p><p>');
-  t=t.replace(/\n/g,'<br>');
-  return '<p>'+t+'</p>';
-}
+    /* Push content when panel open */
+    body.ai-panel-open{margin-right:400px;transition:margin .3s ease;}
+  `;
+  document.head.appendChild(style);
 
-// Send message
-function sendMsg(){
-  var input=document.getElementById('ai-sidebar-input');
-  var msg=input.value.trim();
-  if(!msg)return;
-  input.value='';
-  var msgs=document.getElementById('ai-sidebar-messages');
-  // Remove welcome
-  var welcome=msgs.querySelector('.ai-welcome');
-  if(welcome)welcome.remove();
-  // Add user message
-  var uDiv=document.createElement('div');
-  uDiv.className='ai-msg-user';
-  uDiv.textContent=msg;
-  msgs.appendChild(uDiv);
-  // Add typing indicator
-  var typing=document.createElement('div');
-  typing.className='ai-typing';
-  typing.textContent='\u56de\u7b54\u4e2d';
-  msgs.appendChild(typing);
-  msgs.scrollTop=msgs.scrollHeight;
-  // Disable send
-  var sendBtn=document.getElementById('ai-sidebar-send');
-  sendBtn.disabled=true;
+  /* ── Bottom Bar ── */
+  const bar = document.createElement("div");
+  bar.className = "ai-chat-bar";
+  bar.id = "ai-chat-bar";
+  bar.innerHTML = `
+    <div class="ai-chat-row">
+      <input type="text" id="ai-q-input" placeholder="${PLACEHOLDER}"
+             onkeydown="if(event.key==='Enter')window._aiAsk()">
+      <button onclick="window._aiAsk()">\u9001\u4FE1</button>
+    </div>
+    <div class="ai-footer">${FOOTER_TEXT}</div>
+  `;
+  document.body.appendChild(bar);
 
-  fetch(CHAT_API,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({message:msg,history:history.slice(-6)})
-  }).then(function(r){
-    var ct=r.headers.get('content-type')||'';
-    if(ct.indexOf('text/event-stream')>-1){
-      // Streaming SSE response
-      typing.remove();
-      var aiDiv=document.createElement('div');
-      aiDiv.className='ai-msg-ai';
-      aiDiv.innerHTML='<span class="ai-typing">\u56de\u7b54\u4e2d</span>';
-      msgs.appendChild(aiDiv);
-      var fullText='';
-      var reader=r.body.getReader();
-      var decoder=new TextDecoder();
-      function read(){
-        reader.read().then(function(res){
-          if(res.done){
-            aiDiv.innerHTML=md(fullText||'\u5fdc\u7b54\u306a\u3057');
-            history.push({role:'user',content:msg},{role:'assistant',content:fullText});
-            sendBtn.disabled=false;
-            msgs.scrollTop=msgs.scrollHeight;
-            return;
-          }
-          var chunk=decoder.decode(res.value,{stream:true});
-          var lines=chunk.split('\n');
-          for(var i=0;i<lines.length;i++){
-            var line=lines[i];
-            if(!line.startsWith('data: '))continue;
-            var payload=line.slice(6);
-            if(payload==='[DONE]')continue;
-            try{
-              var ev=JSON.parse(payload);
-              if(ev.type==='content_block_delta'&&ev.delta&&ev.delta.type==='text_delta'){
-                fullText+=ev.delta.text;
-                aiDiv.innerHTML=md(fullText);
-                msgs.scrollTop=msgs.scrollHeight;
-              }
-            }catch(e){}
-          }
-          read();
-        });
-      }
-      read();
-    } else {
-      // JSON response
-      return r.json().then(function(d){
-        typing.remove();
-        var aiDiv=document.createElement('div');
-        aiDiv.className='ai-msg-ai';
-        if(d.error){
-          aiDiv.innerHTML='<span style="color:#ef4444">\u26a0\ufe0f '+d.error+'</span>';
-        } else {
-          var txt=d.response||'\u5fdc\u7b54\u306a\u3057';
-          aiDiv.innerHTML=md(txt);
-          history.push({role:'user',content:msg},{role:'assistant',content:txt});
-        }
-        msgs.appendChild(aiDiv);
-        sendBtn.disabled=false;
-        msgs.scrollTop=msgs.scrollHeight;
+  /* ── Right Panel ── */
+  const panel = document.createElement("div");
+  panel.className = "ai-panel";
+  panel.id = "ai-panel";
+  panel.innerHTML = `
+    <div class="ai-panel-hdr">
+      <span>${TITLE}</span>
+      <button onclick="window._aiClose()">\u2715</button>
+    </div>
+    <div class="ai-panel-body" id="ai-panel-body">
+      <div class="ai-welcome">
+        \u90E8\u6750\u30FB\u8CC7\u6750\u306B\u95A2\u3059\u308B\u8CEA\u554F\u3092<br>\u4E0B\u306E\u5165\u529B\u6B04\u304B\u3089\u3069\u3046\u305E\u3002
+      </div>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  /* ── Resize Handle ── */
+  const resize = document.createElement("div");
+  resize.className = "ai-resize";
+  document.body.appendChild(resize);
+
+  /* ── State ── */
+  let history = [];
+  let isOpen = false;
+
+  /* ── Functions ── */
+  function openPanel() {
+    if (isOpen) return;
+    isOpen = true;
+    panel.classList.add("vis");
+    document.body.classList.add("ai-panel-open");
+  }
+
+  function closePanel() {
+    isOpen = false;
+    panel.classList.remove("vis");
+    document.body.classList.remove("ai-panel-open");
+  }
+
+  function renderMd(text) {
+    return text
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+      .replace(/^[-*] (.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
+      .replace(/\n{2,}/g, "<br><br>")
+      .replace(/\n/g, "<br>");
+  }
+
+  function addMsg(role, text) {
+    const body = document.getElementById("ai-panel-body");
+    const welcome = body.querySelector(".ai-welcome");
+    if (welcome) welcome.remove();
+    const div = document.createElement("div");
+    div.className = "ai-msg " + role;
+    div.innerHTML = role === "user" ? text : renderMd(text);
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  window._aiAsk = async function () {
+    const input = document.getElementById("ai-q-input");
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = "";
+    openPanel();
+    addMsg("user", msg);
+    history.push({ role: "user", content: msg });
+    const body = document.getElementById("ai-panel-body");
+    const loader = document.createElement("div");
+    loader.className = "ai-loading";
+    loader.textContent = "\u2026\u56DE\u7B54\u3092\u751F\u6210\u4E2D";
+    body.appendChild(loader);
+    body.scrollTop = body.scrollHeight;
+    try {
+      const res = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, history: history.slice(-10) }),
       });
+      const ct = res.headers.get("content-type") || "";
+      let answer = "";
+      if (ct.includes("text/event-stream")) {
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop();
+          for (const ln of lines) {
+            if (!ln.startsWith("data: ")) continue;
+            const payload = ln.slice(6);
+            if (payload === "[DONE]") continue;
+            try {
+              const ev = JSON.parse(payload);
+              if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+                answer += ev.delta.text;
+              }
+            } catch (e) {}
+          }
+        }
+      } else {
+        const data = await res.json();
+        answer = data.response || data.error || "\u5FDC\u7B54\u306A\u3057";
+      }
+      loader.remove();
+      addMsg("assistant", answer);
+      history.push({ role: "assistant", content: answer });
+    } catch (err) {
+      loader.remove();
+      addMsg("assistant", "\u26A0\uFE0F \u63A5\u7D9A\u30A8\u30E9\u30FC: " + err.message);
     }
-  }).catch(function(e){
-    typing.remove();
-    var errDiv=document.createElement('div');
-    errDiv.className='ai-msg-ai';
-    errDiv.innerHTML='<span style="color:#ef4444">\u26a0\ufe0f \u63a5\u7d9a\u30a8\u30e9\u30fc: '+e.message+'</span>';
-    msgs.appendChild(errDiv);
-    sendBtn.disabled=false;
-    msgs.scrollTop=msgs.scrollHeight;
+  };
+
+  window._aiClose = closePanel;
+
+  /* ── Resize Drag ── */
+  let dragging = false;
+  resize.addEventListener("mousedown", (e) => { dragging = true; e.preventDefault(); });
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const w = Math.max(280, window.innerWidth - e.clientX);
+    panel.style.width = w + "px";
+    resize.style.right = w + "px";
+    document.body.style.marginRight = w + "px";
   });
-}
-
-// Event listeners
-document.getElementById('ai-sidebar-send').addEventListener('click',sendMsg);
-document.getElementById('ai-sidebar-input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
-
+  document.addEventListener("mouseup", () => { dragging = false; });
 })();
