@@ -1,6 +1,7 @@
 /**
  * AI Chatbot Widget - shirokuma-sekkei-db
- * Bottom input bar + Right side panel design
+ * PC: Bottom input bar + Right side panel
+ * Mobile: FAB button + Fullscreen chat panel
  * + Excel table view & download feature
  */
 (function () {
@@ -8,9 +9,9 @@
 
   /* ── Config ── */
   const API = "/api/chat";
-  const TITLE = "\u{1F916} AI\u90E8\u6750\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8";
-  const PLACEHOLDER = "AI\u306B\u8CEA\u554F\uFF08\u4F8B: \u304A\u3059\u3059\u3081\u306E\u90E8\u6750\u306F\uFF1F \u5728\u5EAB\u306E\u8A73\u7D30\u306F\uFF1F\uFF09";
-  const FOOTER_TEXT = "Claude AI \u304CDB\u3092\u691C\u7D22\u3057\u3066\u56DE\u7B54\u3057\u307E\u3059\u3002";
+  const TITLE = "\u{1F916} AI部材アシスタント";
+  const PLACEHOLDER = "AIに質問（例: おすすめの部材は？ 在庫の詳細は？）";
+  const FOOTER_TEXT = "Claude AI がDBを検索して回答します。";
   const ACCENT = "#3b82f6";
   const ACCENT_HOVER = "#2563eb";
   const ACCENT_LIGHT = "#60a5fa";
@@ -26,7 +27,7 @@
   /* ── Styles ── */
   const style = document.createElement("style");
   style.textContent = `
-    /* Bottom Bar */
+    /* ===== PC: Bottom Bar ===== */
     .ai-chat-bar{position:fixed;bottom:0;left:0;right:0;z-index:9998;
       background:#0f172a;border-top:1px solid #334155;padding:12px 20px;
       display:flex;flex-direction:column;gap:4px;}
@@ -40,7 +41,7 @@
     .ai-chat-bar button:hover{background:${ACCENT_HOVER};}
     .ai-chat-bar .ai-footer{font-size:11px;color:#64748b;text-align:center;}
 
-    /* Right Panel */
+    /* ===== PC: Right Panel ===== */
     .ai-panel{position:fixed;top:0;right:0;bottom:0;width:400px;z-index:9997;
       background:#1e293b;border-left:1px solid #334155;display:flex;flex-direction:column;
       transform:translateX(100%);transition:transform .3s ease;}
@@ -64,19 +65,37 @@
     .ai-panel-body .ai-msg.assistant strong{color:${ACCENT_PALE};}
     .ai-panel-body .ai-loading{color:#94a3b8;padding:12px;text-align:center;}
 
-    /* Resize handle */
+    /* ===== Mobile: Input inside panel footer ===== */
+    .ai-panel-footer{display:none;padding:10px 12px;background:#0f172a;border-top:1px solid #334155;}
+    .ai-panel-footer .ai-chat-row{display:flex;gap:6px;align-items:center;}
+    .ai-panel-footer input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid #334155;
+      background:#1e293b;color:#e2e8f0;font-size:14px;outline:none;}
+    .ai-panel-footer input:focus{border-color:${ACCENT_LIGHT};}
+    .ai-panel-footer input::placeholder{color:#94a3b8;}
+    .ai-panel-footer button{padding:10px 16px;border-radius:8px;border:none;
+      background:${ACCENT};color:#fff;font-size:14px;cursor:pointer;white-space:nowrap;}
+
+    /* ===== Resize handle ===== */
     .ai-resize{position:fixed;top:0;bottom:0;width:5px;right:400px;z-index:9999;
       cursor:col-resize;background:transparent;display:none;}
     .ai-panel.vis~.ai-resize{display:block;}
     .ai-resize:hover{background:#334155;}
 
-    /* Push content when panel open */
+    /* Push content when panel open (PC) */
     body.ai-panel-open{margin-right:400px;transition:margin .3s ease;}
-
-    /* Prevent bottom content from being hidden behind fixed chat bar */
+    /* Prevent bottom content hidden behind bar (PC) */
     body{padding-bottom:70px !important;}
 
-    /* ── Excel Table Styles ── */
+    /* ===== FAB Button (hidden on PC) ===== */
+    .ai-fab{display:none;position:fixed;bottom:16px;right:16px;z-index:9998;
+      width:56px;height:56px;border-radius:50%;border:none;
+      background:${ACCENT};color:#fff;font-size:24px;cursor:pointer;
+      box-shadow:0 4px 14px rgba(59,130,246,0.5);
+      transition:transform .2s,box-shadow .2s;align-items:center;justify-content:center;}
+    .ai-fab:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(59,130,246,0.6);}
+    .ai-fab:active{transform:scale(0.95);}
+
+    /* ===== Excel Table Styles ===== */
     .ai-table-wrap{overflow-x:auto;margin:10px 0;border-radius:6px;border:1px solid #334155;}
     .ai-table-wrap table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap;}
     .ai-table-wrap th{background:#0f172a;color:${ACCENT_LIGHT};padding:8px 10px;
@@ -92,16 +111,15 @@
     .ai-excel-btns button:hover{background:#334155;border-color:${ACCENT};}
     .ai-excel-btns button svg{width:14px;height:14px;}
 
-    /* ── Mobile Responsive ── */
+    /* ===== Mobile: FAB mode ===== */
     @media(max-width:768px){
-      body{padding-bottom:56px !important;}
-      .ai-chat-bar{padding:6px 10px;gap:2px;}
-      .ai-chat-row{gap:6px;}
-      .ai-chat-bar input{padding:8px 10px;font-size:13px;border-radius:6px;}
-      .ai-chat-bar button{padding:8px 14px;font-size:13px;border-radius:6px;}
-      .ai-chat-bar .ai-footer{font-size:10px;}
+      /* Hide PC bottom bar, show FAB */
+      .ai-chat-bar{display:none !important;}
+      .ai-fab{display:flex !important;}
+      body{padding-bottom:0 !important;}
 
-      .ai-panel{width:100vw !important;}
+      /* Panel = fullscreen */
+      .ai-panel{width:100vw !important;z-index:10000;}
       .ai-panel-hdr{padding:10px 14px;font-size:14px;}
       .ai-panel-hdr button{font-size:18px;}
       .ai-panel-body{padding:12px;font-size:13px;line-height:1.6;}
@@ -111,6 +129,9 @@
       .ai-panel-body .ai-welcome{margin-top:20px;font-size:13px;line-height:1.6;}
       .ai-panel-body .ai-loading{font-size:13px;padding:8px;}
 
+      /* Show input inside panel footer on mobile */
+      .ai-panel-footer{display:block !important;}
+
       body.ai-panel-open{margin-right:0 !important;}
       .ai-resize{display:none !important;}
 
@@ -119,11 +140,14 @@
       .ai-table-wrap td{padding:4px 8px;}
       .ai-table-wrap .ai-table-container{max-height:250px;}
       .ai-excel-btns button{padding:5px 10px;font-size:11px;}
+
+      /* Hide FAB when panel is open */
+      body.ai-panel-open .ai-fab{display:none !important;}
     }
   `;
   document.head.appendChild(style);
 
-  /* ── Bottom Bar ── */
+  /* ── PC: Bottom Bar ── */
   const bar = document.createElement("div");
   bar.className = "ai-chat-bar";
   bar.id = "ai-chat-bar";
@@ -131,24 +155,39 @@
     <div class="ai-chat-row">
       <input type="text" id="ai-q-input" placeholder="${PLACEHOLDER}"
              onkeydown="if(event.key==='Enter')window._aiAsk()">
-      <button onclick="window._aiAsk()">\u9001\u4FE1</button>
+      <button onclick="window._aiAsk()">送信</button>
     </div>
     <div class="ai-footer">${FOOTER_TEXT}</div>
   `;
   document.body.appendChild(bar);
 
-  /* ── Right Panel ── */
+  /* ── Mobile: FAB Button ── */
+  const fab = document.createElement("button");
+  fab.className = "ai-fab";
+  fab.id = "ai-fab";
+  fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>`;
+  fab.onclick = function(){ openPanel(); };
+  document.body.appendChild(fab);
+
+  /* ── Right Panel (shared PC/Mobile) ── */
   const panel = document.createElement("div");
   panel.className = "ai-panel";
   panel.id = "ai-panel";
   panel.innerHTML = `
     <div class="ai-panel-hdr">
       <span>${TITLE}</span>
-      <button onclick="window._aiClose()">\u2715</button>
+      <button onclick="window._aiClose()">✕</button>
     </div>
     <div class="ai-panel-body" id="ai-panel-body">
       <div class="ai-welcome">
-        \u90E8\u6750\u30FB\u8CC7\u6750\u306B\u95A2\u3059\u308B\u8CEA\u554F\u3092<br>\u4E0B\u306E\u5165\u529B\u6B04\u304B\u3089\u3069\u3046\u305E\u3002
+        部材・資材に関する質問を<br>下の入力欄からどうぞ。
+      </div>
+    </div>
+    <div class="ai-panel-footer" id="ai-panel-footer">
+      <div class="ai-chat-row">
+        <input type="text" id="ai-m-input" placeholder="${PLACEHOLDER}"
+               onkeydown="if(event.key==='Enter')window._aiAsk()">
+        <button onclick="window._aiAsk()">送信</button>
       </div>
     </div>
   `;
@@ -165,11 +204,22 @@
   let tableCounter = 0;
 
   /* ── Functions ── */
+  function isMobile() { return window.innerWidth <= 768; }
+
+  function getInput() {
+    if (isMobile()) return document.getElementById("ai-m-input");
+    return document.getElementById("ai-q-input");
+  }
+
   function openPanel() {
     if (isOpen) return;
     isOpen = true;
     panel.classList.add("vis");
     document.body.classList.add("ai-panel-open");
+    // Focus mobile input when panel opens
+    if (isMobile()) {
+      setTimeout(() => { const inp = document.getElementById("ai-m-input"); if (inp) inp.focus(); }, 350);
+    }
   }
 
   function closePanel() {
@@ -184,7 +234,6 @@
     if (lines.length < 2) return null;
     const parseRow = (line) => line.split("|").map(c => c.trim()).filter(c => c !== "");
     const headers = parseRow(lines[0]);
-    // skip separator line (line with ---)
     const startIdx = lines[1].replace(/[|\s\-:]/g, "") === "" ? 2 : 1;
     const rows = [];
     for (let i = startIdx; i < lines.length; i++) {
@@ -206,15 +255,13 @@
       html += "<tr>" + row.map(c => `<td>${c}</td>`).join("") + "</tr>";
     });
     html += "</tbody></table></div></div>";
-
-    // Excel buttons
     html += `<div class="ai-excel-btns">`;
-    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="\u30C6\u30FC\u30D6\u30EB\u8868\u793A/\u975E\u8868\u793A">`;
+    html += `<button onclick="window._aiToggleTable('tw-${id}')" title="テーブル表示/非表示">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>`;
-    html += `\u30C6\u30FC\u30D6\u30EB\u8868\u793A</button>`;
-    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excel\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9">`;
+    html += `テーブル表示</button>`;
+    html += `<button onclick="window._aiDownloadExcel('tw-${id}')" title="Excelダウンロード">`;
     html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>`;
-    html += `Excel \u30C0\u30A6\u30F3\u30ED\u30FC\u30C9</button>`;
+    html += `Excel ダウンロード</button>`;
     html += `</div>`;
     return html;
   }
@@ -226,10 +273,10 @@
     const btn = tw.nextElementSibling?.querySelector("button");
     if (tw.style.display === "none") {
       tw.style.display = "";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("\u30C6\u30FC\u30D6\u30EB\u8868\u793A", "\u30C6\u30FC\u30D6\u30EB\u8868\u793A");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル表示", "テーブル表示");
     } else {
       tw.style.display = "none";
-      if (btn) btn.innerHTML = btn.innerHTML.replace("\u30C6\u30FC\u30D6\u30EB\u8868\u793A", "\u30C6\u30FC\u30D6\u30EB\u518D\u8868\u793A");
+      if (btn) btn.innerHTML = btn.innerHTML.replace("テーブル表示", "テーブル再表示");
     }
   };
 
@@ -237,19 +284,15 @@
   window._aiDownloadExcel = function (id) {
     const tw = document.getElementById(id);
     if (!tw || !window.XLSX) {
-      alert("Excel\u30E9\u30A4\u30D6\u30E9\u30EA\u3092\u8AAD\u307F\u8FBC\u307F\u4E2D\u3067\u3059\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002");
+      alert("Excelライブラリを読み込み中です。もう一度お試しください。");
       return;
     }
-    // Get table element (could be hidden)
     const origDisplay = tw.style.display;
     tw.style.display = "";
     const table = tw.querySelector("table");
     if (!table) { tw.style.display = origDisplay; return; }
-
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.table_to_sheet(table);
-
-    // Auto column width
     const cols = [];
     const range = XLSX.utils.decode_range(ws["!ref"]);
     for (let c = range.s.c; c <= range.e.c; c++) {
@@ -264,8 +307,7 @@
       cols.push({ wch: maxW });
     }
     ws["!cols"] = cols;
-
-    XLSX.utils.book_append_sheet(wb, ws, "AI\u691C\u7D22\u7D50\u679C");
+    XLSX.utils.book_append_sheet(wb, ws, "AI検索結果");
     const now = new Date();
     const ts = now.getFullYear() + ("0"+(now.getMonth()+1)).slice(-2) + ("0"+now.getDate()).slice(-2) + "_" + ("0"+now.getHours()).slice(-2) + ("0"+now.getMinutes()).slice(-2);
     XLSX.writeFile(wb, "AI_result_" + ts + ".xlsx");
@@ -274,7 +316,6 @@
 
   /* ── Render Markdown with Table Detection ── */
   function renderMd(text) {
-    // First, extract markdown tables and replace with placeholders
     const tables = [];
     const tableRegex = /((?:^\|.+\|[ \t]*\n){2,})/gm;
     let processed = text.replace(tableRegex, (match) => {
@@ -286,8 +327,6 @@
       }
       return match;
     });
-
-    // Standard markdown rendering
     processed = processed
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -297,12 +336,9 @@
       .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
       .replace(/\n{2,}/g, "<br><br>")
       .replace(/\n/g, "<br>");
-
-    // Replace placeholders with actual table HTML
     tables.forEach(t => {
       processed = processed.replace(`%%TABLE_${t.id}%%`, buildTableHtml(t.data, t.id));
     });
-
     return processed;
   }
 
@@ -310,7 +346,6 @@
     const body = document.getElementById("ai-panel-body");
     const welcome = body.querySelector(".ai-welcome");
     if (welcome) welcome.remove();
-
     const div = document.createElement("div");
     div.className = "ai-msg " + role;
     div.innerHTML = role === "user" ? text : renderMd(text);
@@ -319,7 +354,7 @@
   }
 
   window._aiAsk = async function () {
-    const input = document.getElementById("ai-q-input");
+    const input = getInput();
     const msg = input.value.trim();
     if (!msg) return;
     input.value = "";
@@ -331,7 +366,7 @@
     const body = document.getElementById("ai-panel-body");
     const loader = document.createElement("div");
     loader.className = "ai-loading";
-    loader.textContent = "\u2026\u56DE\u7B54\u3092\u751F\u6210\u4E2D";
+    loader.textContent = "…回答を生成中";
     body.appendChild(loader);
     body.scrollTop = body.scrollHeight;
 
@@ -368,7 +403,7 @@
         }
       } else {
         const data = await res.json();
-        answer = data.response || data.error || "\u5FDC\u7B54\u306A\u3057";
+        answer = data.response || data.error || "応答なし";
       }
 
       loader.remove();
@@ -376,13 +411,13 @@
       history.push({ role: "assistant", content: answer });
     } catch (err) {
       loader.remove();
-      addMsg("assistant", "\u26A0\uFE0F \u63A5\u7D9A\u30A8\u30E9\u30FC: " + err.message);
+      addMsg("assistant", "⚠️ 接続エラー: " + err.message);
     }
   };
 
   window._aiClose = closePanel;
 
-  /* ── Resize Drag ── */
+  /* ── Resize Drag (PC only) ── */
   let dragging = false;
   resize.addEventListener("mousedown", (e) => { dragging = true; e.preventDefault(); });
   document.addEventListener("mousemove", (e) => {
