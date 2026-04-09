@@ -2076,7 +2076,71 @@ document.getElementById('excelBtn').addEventListener('click', () => {
   });
   
   </script>
-<script src="chatbot-widget.js"></script></body>
+<script src="chatbot-widget.js"></script>
+<!-- ===== モバイル対応: タブ横一列 + 検索・フィルター折りたたみ ===== -->
+<style id="mobile-fix-v3">
+@media(max-width:768px){
+  .tab-menu{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;gap:6px!important;padding:6px 8px!important;}
+  .tab-btn{white-space:nowrap!important;flex-shrink:0!important;font-size:13px!important;padding:6px 10px!important;}
+  .mobile-toggle-bar{display:flex!important;align-items:center;justify-content:center;gap:6px;padding:8px;background:linear-gradient(135deg,#1a73e8,#4285f4);color:#fff;border:none;width:100%;font-size:13px;font-weight:600;cursor:pointer;}
+  .mobile-toggle-bar.closed{background:linear-gradient(135deg,#455a64,#607d8b);}
+  .main-header{padding:8px 10px!important;}
+  .main-header h2{font-size:14px!important;}
+  .header-search{padding:6px 10px!important;}
+  .header-search input{font-size:13px!important;padding:8px 10px!important;}
+}
+</style>
+<script>
+(function(){
+  function initMobileFix(){
+    if(window.innerWidth>768) return;
+    var mainEl=document.querySelector('.main');
+    if(!mainEl||document.getElementById('mobile-toggle')) return;
+    var mainHeader=mainEl.querySelector('.main-header');
+    var tabMenu=mainEl.querySelector('.tab-menu');
+    var toolbarToggle=mainEl.querySelector('.toolbar-toggle');
+    var toolbar=mainEl.querySelector('.toolbar');
+    var headerSearch=document.querySelector('.header-search');
+    if(!mainHeader) return;
+    var wrapper=document.createElement('div');
+    wrapper.id='mobile-collapse';
+    var toggle=document.createElement('button');
+    toggle.id='mobile-toggle';
+    toggle.className='mobile-toggle-bar';
+    toggle.textContent='\u25B2 検索・フィルターを隠す';
+    toggle.style.display='none';
+    mainEl.insertBefore(toggle,mainHeader);
+    mainEl.insertBefore(wrapper,mainHeader);
+    if(headerSearch)wrapper.appendChild(headerSearch);
+    wrapper.appendChild(mainHeader);
+    if(tabMenu)wrapper.appendChild(tabMenu);
+    if(toolbarToggle)wrapper.appendChild(toolbarToggle);
+    if(toolbar)wrapper.appendChild(toolbar);
+    function doToggle(){
+      if(wrapper.style.display==='none'){
+        wrapper.style.display='';
+        toggle.textContent='\u25B2 検索・フィルターを隠す';
+        toggle.className='mobile-toggle-bar';
+      }else{
+        wrapper.style.display='none';
+        toggle.textContent='\u25BC 検索・フィルターを表示';
+        toggle.className='mobile-toggle-bar closed';
+      }
+    }
+    toggle.addEventListener('click',doToggle);
+    toggle.addEventListener('touchend',function(e){e.preventDefault();doToggle();});
+    function checkWidth(){
+      if(window.innerWidth<=768){toggle.style.display='flex';}
+      else{toggle.style.display='none';wrapper.style.display='';toggle.textContent='\u25B2 検索・フィルターを隠す';toggle.className='mobile-toggle-bar';}
+    }
+    checkWidth();
+    window.addEventListener('resize',checkWidth);
+  }
+  if(document.readyState==='complete')setTimeout(initMobileFix,200);
+  else window.addEventListener('load',function(){setTimeout(initMobileFix,200);});
+})();
+</script>
+</body>
 </html>
 
 Claude is active in this tab group
