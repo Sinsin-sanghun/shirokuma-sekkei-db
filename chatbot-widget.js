@@ -332,9 +332,18 @@
       let answer = "";
 
       if (ct.includes("text/event-stream")) {
+        // === 실시간 스트리밍: delta마다 즉시 화면 표시 ===
+        const welcome = body.querySelector(".ai-welcome");
+        if (welcome) welcome.remove();
+        loader.remove();
+        const streamDiv = document.createElement("div");
+        streamDiv.className = "ai-msg assistant";
+        body.appendChild(streamDiv);
+
         const reader = res.body.getReader();
         const dec = new TextDecoder();
         let buf = "";
+        let streaming = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -349,17 +358,24 @@
               const ev = JSON.parse(payload);
               if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
                 answer += ev.delta.text;
+                streaming = true;
+                // 실시간 렌더링: Markdown → HTML
+                streamDiv.innerHTML = renderMd(answer);
+                body.scrollTop = body.scrollHeight;
               }
             } catch (e) {}
           }
         }
+        if (!streaming) {
+          streamDiv.innerHTML = renderMd(answer || "応答なし");
+        }
       } else {
         const data = await res.json();
         answer = data.response || data.error || "応答なし";
+        loader.remove();
+        addMsg("assistant", answer);
       }
 
-      loader.remove();
-      addMsg("assistant", answer);
       history.push({ role: "assistant", content: answer });
     } catch (err) {
       loader.remove();
