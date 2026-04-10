@@ -195,6 +195,8 @@ export default async (req) => {
         }));
 
         messages.push({ role: "assistant", content: result1.content });
+        // tool_result + 追加検索を防止する指示を同一メッセージに
+        toolResults.push({ type: "text", text: "【指示】上記の検索結果をもとに、ユーザーの質問に回答してください。追加検索は不要です。取得済みデータでテーブル形式に整理して回答してください。" });
         messages.push({ role: "user", content: toolResults });
 
         // === 2nd call: streaming final answer (no tools → forces text) ===
