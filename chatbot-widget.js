@@ -90,14 +90,9 @@
     .ai-excel-btns button:hover{background:#334155;border-color:${ACCENT};}
     .ai-excel-btns button svg{width:14px;height:14px;}
 
-    /* ===== Mobile: compact bar, always visible ===== */
+    /* ===== Mobile: 원본 AI 입력 사용, 위젯 바 숨김 (방법 A) ===== */
     @media(max-width:768px){
-      /* Compact bottom bar - 1줄, footer 숨김 */
-      .ai-chat-bar{padding:6px 8px;gap:0;}
-      .ai-chat-row{gap:6px;}
-      .ai-chat-bar input{padding:8px 10px;font-size:13px;border-radius:6px;}
-      .ai-chat-bar button{padding:8px 12px;font-size:13px;border-radius:6px;}
-      .ai-chat-bar .ai-footer{display:none;}
+      .ai-chat-bar{display:none !important;}
 
       /* 페이지 콘텐츠가 검색바에 안 가려지게 */
       body{padding-bottom:52px !important;}
@@ -332,7 +327,6 @@
       let answer = "";
 
       if (ct.includes("text/event-stream")) {
-        // === 실시간 스트리밍: delta마다 즉시 화면 표시 ===
         const welcome = body.querySelector(".ai-welcome");
         if (welcome) welcome.remove();
         loader.remove();
@@ -359,7 +353,6 @@
               if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
                 answer += ev.delta.text;
                 streaming = true;
-                // 실시간 렌더링: Markdown → HTML
                 streamDiv.innerHTML = renderMd(answer);
                 body.scrollTop = body.scrollHeight;
               }
