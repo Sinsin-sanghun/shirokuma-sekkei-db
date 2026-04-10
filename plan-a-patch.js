@@ -6,10 +6,12 @@
 (function () {
   "use strict";
 
-  // ===== A-3: 스타일 패치 (오렌지 → 블루) =====
+  // ===== A-3: 스타일 패치 (오렌지 → 블루 + 다크 배경) =====
   const patchStyle = document.createElement("style");
   patchStyle.textContent = `
     .ai-response-header { background: #3b82f6 !important; }
+    #aiPanel { background: #0f172a !important; border: 1px solid #334155 !important; border-radius: 8px !important; }
+    #aiResults { background: #0f172a !important; color: #e2e8f0 !important; padding: 8px !important; }
   `;
   document.head.appendChild(patchStyle);
 
@@ -40,7 +42,7 @@
     const results = document.getElementById("aiResults");
     panel.style.display = "block";
     results.innerHTML =
-      '<div style="color:#94a3b8;padding:8px;">…回答を生成中</div>';
+      '<div style="color:#94a3b8;padding:12px;text-align:center;">…回答を生成中</div>';
 
     try {
       const res = await fetch("/api/chat", {
