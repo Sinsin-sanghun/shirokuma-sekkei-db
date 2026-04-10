@@ -229,20 +229,17 @@ export default async (req) => {
           messages.push({ role: "user", content: tr2 });
           send({ type: "ping" });
 
-          // Final streaming call
+          // Final call (non-streaming to avoid empty content issue)
           const resFinal = await fetch(ANTHROPIC_API_URL, {
             method: "POST", headers: apiHeaders,
-            body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages, stream: true })
+            body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages })
           });
-          if (resFinal.ok && resFinal.body) {
-            const reader = resFinal.body.getReader();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              controller.enqueue(value);
-            }
+          if (resFinal.ok) {
+            const resultFinal = await resFinal.json();
+            const finalText = (resultFinal.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+            sendText(finalText || "応答なし");
           } else {
-            sendText("⚠️ ストリーミングエラー");
+            sendText("⚠️ 最終APIエラー");
           }
         } else {
           // 2nd call returned text → send it
