@@ -149,6 +149,10 @@ export default async (req) => {
       const send = (data) => controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
       const sendText = (t) => send({ type: "content_block_delta", delta: { type: "text_delta", text: t } });
 
+      // 3초마다 ping → 연결 유지
+      const pingTimer = setInterval(() => { try { send({ type: "ping" }); } catch(e) {} }, 3000);
+      const done = () => { clearInterval(pingTimer); controller.enqueue(enc.encode("data: [DONE]\n\n")); controller.close(); };
+
       try {
         const messages = hist.slice(-6).map(h => ({ role: h.role, content: h.content }));
         messages.push({ role: "user", content: msg });
@@ -159,21 +163,17 @@ export default async (req) => {
           "content-type": "application/json"
         };
 
-        // Keep-alive: 연결 즉시 열림 → Netlify 타임아웃 회피
         send({ type: "ping" });
 
-        // === 1st call: with tools (non-streaming) ===
+        // === 1st call: with tools (non-streaming to detect tool_use) ===
         const res1 = await fetch(ANTHROPIC_API_URL, {
           method: "POST", headers: apiHeaders,
           body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
         });
 
         if (!res1.ok) {
-          const txt = await res1.text();
-          sendText("⚠️ APIエラー: " + txt.slice(0, 200));
-          controller.enqueue(enc.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
+          sendText("⚠️ APIエラー: " + (await res1.text()).slice(0, 200));
+          done(); return;
         }
 
         const result1 = await res1.json();
@@ -182,15 +182,12 @@ export default async (req) => {
         if (result1.stop_reason !== "tool_use") {
           const text = (result1.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
           sendText(text || "応答なし");
-          controller.enqueue(enc.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
+          done(); return;
         }
 
-        // === Execute tools ===
+        // === Execute tools (parallel) ===
         const toolBlocks = result1.content.filter(b => b.type === "tool_use");
         console.log(`[Tools] ${toolBlocks.map(b => b.name).join(", ")}`);
-        send({ type: "ping" }); // keep-alive
 
         const toolResults = await Promise.all(toolBlocks.map(async (block) => {
           const output = await executeTool(block.name, block.input);
@@ -199,59 +196,48 @@ export default async (req) => {
 
         messages.push({ role: "assistant", content: result1.content });
         messages.push({ role: "user", content: toolResults });
-        send({ type: "ping" }); // keep-alive
 
-        // === 2nd call: check if more tools needed ===
+        // === 2nd call: streaming final answer (no tools → forces text) ===
         const res2 = await fetch(ANTHROPIC_API_URL, {
           method: "POST", headers: apiHeaders,
-          body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
+          body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages, stream: true })
         });
 
         if (!res2.ok) {
-          sendText("⚠️ 2次APIエラー");
-          controller.enqueue(enc.encode("data: [DONE]\n\n"));
-          controller.close();
-          return;
+          sendText("⚠️ 2次APIエラー: " + (await res2.text()).slice(0, 200));
+          done(); return;
         }
 
-        const result2 = await res2.json();
-
-        if (result2.stop_reason === "tool_use") {
-          // 2nd round tools
-          const tb2 = result2.content.filter(b => b.type === "tool_use");
-          console.log(`[Tools 2nd] ${tb2.map(b => b.name).join(", ")}`);
-          send({ type: "ping" });
-          const tr2 = await Promise.all(tb2.map(async (block) => {
-            const output = await executeTool(block.name, block.input);
-            return { type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 12000) };
-          }));
-          messages.push({ role: "assistant", content: result2.content });
-          messages.push({ role: "user", content: tr2 });
-          send({ type: "ping" });
-
-          // Final call (non-streaming to avoid empty content issue)
-          const resFinal = await fetch(ANTHROPIC_API_URL, {
-            method: "POST", headers: apiHeaders,
-            body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages })
-          });
-          if (resFinal.ok) {
-            const resultFinal = await resFinal.json();
-            const finalText = (resultFinal.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-            sendText(finalText || "応答なし");
-          } else {
-            sendText("⚠️ 最終APIエラー");
+        // Anthropic SSE → 클라이언트로 text_delta만 포워딩
+        const reader2 = res2.body.getReader();
+        const dec = new TextDecoder();
+        let buf = "";
+        let gotText = false;
+        while (true) {
+          const { done: rd, value } = await reader2.read();
+          if (rd) break;
+          buf += dec.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop();
+          for (const ln of lines) {
+            if (!ln.startsWith("data: ")) continue;
+            const payload = ln.slice(6).trim();
+            if (payload === "[DONE]") continue;
+            try {
+              const ev = JSON.parse(payload);
+              if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") {
+                sendText(ev.delta.text);
+                gotText = true;
+              }
+            } catch(e) {}
           }
-        } else {
-          // 2nd call returned text → send it
-          const text = (result2.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-          sendText(text || "応答なし");
         }
-
-        controller.enqueue(enc.encode("data: [DONE]\n\n"));
-        controller.close();
+        if (!gotText) sendText("応答なし");
+        done();
 
       } catch (e) {
         console.error("Stream error:", e);
+        clearInterval(pingTimer);
         sendText("⚠️ エラー: " + e.message);
         controller.enqueue(enc.encode("data: [DONE]\n\n"));
         controller.close();
