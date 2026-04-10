@@ -126,127 +126,147 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// === Netlify Functions 2.0 Handler (streaming) ===
+// === Netlify Functions 2.0 Handler (streaming from start to avoid timeout) ===
 export default async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("", { headers: CORS });
   }
 
-  try {
-    const body = await req.json();
-    const msg = body.message || "";
-    const hist = body.history || [];
+  let bodyParsed;
+  try { bodyParsed = await req.json(); } catch { bodyParsed = {}; }
+  const msg = bodyParsed.message || "";
+  const hist = bodyParsed.history || [];
 
-    if (!msg) {
-      return new Response(JSON.stringify({ error: "empty message" }), {
-        status: 400, headers: { ...CORS, "Content-Type": "application/json" }
-      });
-    }
-
-    const messages = hist.slice(-6).map(h => ({ role: h.role, content: h.content }));
-    messages.push({ role: "user", content: msg });
-
-    const apiHeaders = {
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json"
-    };
-
-    // === 1st call: non-streaming, with tools ===
-    const res1 = await fetch(ANTHROPIC_API_URL, {
-      method: "POST", headers: apiHeaders,
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
+  if (!msg) {
+    return new Response(JSON.stringify({ error: "empty message" }), {
+      status: 400, headers: { ...CORS, "Content-Type": "application/json" }
     });
+  }
 
-    if (!res1.ok) {
-      const txt = await res1.text();
-      return new Response(JSON.stringify({ response: "⚠️ APIエラー: " + txt.slice(0, 200) }), {
-        headers: { ...CORS, "Content-Type": "application/json" }
-      });
-    }
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data) => controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`));
+      const sendText = (t) => send({ type: "content_block_delta", delta: { type: "text_delta", text: t } });
 
-    const result1 = await res1.json();
+      try {
+        const messages = hist.slice(-6).map(h => ({ role: h.role, content: h.content }));
+        messages.push({ role: "user", content: msg });
 
-    // If no tool use → return as JSON (fast path)
-    if (result1.stop_reason !== "tool_use") {
-      const text = (result1.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-      return new Response(JSON.stringify({ response: text || "応答なし" }), {
-        headers: { ...CORS, "Content-Type": "application/json" }
-      });
-    }
+        const apiHeaders = {
+          "x-api-key": process.env.ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json"
+        };
 
-    // === Execute tools in parallel ===
-    const toolBlocks = result1.content.filter(b => b.type === "tool_use");
-    console.log(`[Tools] ${toolBlocks.map(b => b.name).join(", ")}`);
+        // Keep-alive: 연결 즉시 열림 → Netlify 타임아웃 회피
+        send({ type: "ping" });
 
-    const toolResults = await Promise.all(toolBlocks.map(async (block) => {
-      const output = await executeTool(block.name, block.input);
-      return { type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 12000) };
-    }));
+        // === 1st call: with tools (non-streaming) ===
+        const res1 = await fetch(ANTHROPIC_API_URL, {
+          method: "POST", headers: apiHeaders,
+          body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
+        });
 
-    messages.push({ role: "assistant", content: result1.content });
-    messages.push({ role: "user", content: toolResults });
+        if (!res1.ok) {
+          const txt = await res1.text();
+          sendText("⚠️ APIエラー: " + txt.slice(0, 200));
+          controller.enqueue(enc.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
 
-    // === Check if 2nd tool use needed ===
-    const res1b = await fetch(ANTHROPIC_API_URL, {
-      method: "POST", headers: apiHeaders,
-      body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
-    });
+        const result1 = await res1.json();
 
-    if (res1b.ok) {
-      const result1b = await res1b.json();
-      if (result1b.stop_reason === "tool_use") {
-        // 2nd round of tool use
-        const toolBlocks2 = result1b.content.filter(b => b.type === "tool_use");
-        console.log(`[Tools 2nd] ${toolBlocks2.map(b => b.name).join(", ")}`);
-        const toolResults2 = await Promise.all(toolBlocks2.map(async (block) => {
+        // No tool use → send text directly
+        if (result1.stop_reason !== "tool_use") {
+          const text = (result1.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+          sendText(text || "応答なし");
+          controller.enqueue(enc.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        // === Execute tools ===
+        const toolBlocks = result1.content.filter(b => b.type === "tool_use");
+        console.log(`[Tools] ${toolBlocks.map(b => b.name).join(", ")}`);
+        send({ type: "ping" }); // keep-alive
+
+        const toolResults = await Promise.all(toolBlocks.map(async (block) => {
           const output = await executeTool(block.name, block.input);
           return { type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 12000) };
         }));
-        messages.push({ role: "assistant", content: result1b.content });
-        messages.push({ role: "user", content: toolResults2 });
-      } else {
-        // Got text response - return as JSON
-        const text = (result1b.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
-        return new Response(JSON.stringify({ response: text || "応答なし" }), {
-          headers: { ...CORS, "Content-Type": "application/json" }
+
+        messages.push({ role: "assistant", content: result1.content });
+        messages.push({ role: "user", content: toolResults });
+        send({ type: "ping" }); // keep-alive
+
+        // === 2nd call: check if more tools needed ===
+        const res2 = await fetch(ANTHROPIC_API_URL, {
+          method: "POST", headers: apiHeaders,
+          body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, tools: TOOLS, messages })
         });
+
+        if (!res2.ok) {
+          sendText("⚠️ 2次APIエラー");
+          controller.enqueue(enc.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+
+        const result2 = await res2.json();
+
+        if (result2.stop_reason === "tool_use") {
+          // 2nd round tools
+          const tb2 = result2.content.filter(b => b.type === "tool_use");
+          console.log(`[Tools 2nd] ${tb2.map(b => b.name).join(", ")}`);
+          send({ type: "ping" });
+          const tr2 = await Promise.all(tb2.map(async (block) => {
+            const output = await executeTool(block.name, block.input);
+            return { type: "tool_result", tool_use_id: block.id, content: JSON.stringify(output).slice(0, 12000) };
+          }));
+          messages.push({ role: "assistant", content: result2.content });
+          messages.push({ role: "user", content: tr2 });
+          send({ type: "ping" });
+
+          // Final streaming call
+          const resFinal = await fetch(ANTHROPIC_API_URL, {
+            method: "POST", headers: apiHeaders,
+            body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages, stream: true })
+          });
+          if (resFinal.ok && resFinal.body) {
+            const reader = resFinal.body.getReader();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
+            }
+          } else {
+            sendText("⚠️ ストリーミングエラー");
+          }
+        } else {
+          // 2nd call returned text → send it
+          const text = (result2.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+          sendText(text || "応答なし");
+        }
+
+        controller.enqueue(enc.encode("data: [DONE]\n\n"));
+        controller.close();
+
+      } catch (e) {
+        console.error("Stream error:", e);
+        sendText("⚠️ エラー: " + e.message);
+        controller.enqueue(enc.encode("data: [DONE]\n\n"));
+        controller.close();
       }
     }
+  });
 
-    // === Final call: STREAMING, no tools ===
-    const resFinal = await fetch(ANTHROPIC_API_URL, {
-      method: "POST", headers: apiHeaders,
-      body: JSON.stringify({
-        model: CLAUDE_MODEL,
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages,
-        stream: true
-        // tools 제거 → 텍스트 응답 강제
-      })
-    });
-
-    if (!resFinal.ok) {
-      const txt = await resFinal.text();
-      return new Response(JSON.stringify({ response: "⚠️ ストリーミングエラー: " + txt.slice(0, 200) }), {
-        headers: { ...CORS, "Content-Type": "application/json" }
-      });
+  return new Response(stream, {
+    headers: {
+      ...CORS,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
     }
-
-    // SSE 스트림 프록시
-    return new Response(resFinal.body, {
-      headers: {
-        ...CORS,
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-      }
-    });
-
-  } catch (e) {
-    console.error("Function error:", e);
-    return new Response(JSON.stringify({ response: "⚠️ エラー: " + e.message }), {
-      headers: { ...CORS, "Content-Type": "application/json" }
-    });
-  }
+  });
 };
