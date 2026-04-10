@@ -660,12 +660,13 @@ tbody td {
       }
       .doc-table tbody tr td { border: none; padding: 2px 4px; }
       .doc-table tbody tr td:first-child { display: none; }
-      .doc-table tbody tr td:nth-child(2) { 
+      .doc-table tbody tr td:nth-child(2) { font-size: 11px; }
+      .doc-table tbody tr td:nth-child(3) { font-size: 11px; color: #9ca3af; }
+      .doc-table tbody tr td:nth-child(4) { 
         flex: 0 0 100%; font-size: 14px; font-weight: 600; color: var(--accent-light);
         padding-bottom: 6px; border-bottom: 1px solid #2a2f40; margin-bottom: 6px;
+        order: -1;
       }
-      .doc-table tbody tr td:nth-child(3) { font-size: 11px; }
-      .doc-table tbody tr td:nth-child(4) { font-size: 11px; color: #9ca3af; }
       .doc-table tbody tr td:nth-child(5) { font-size: 10px; }
       .doc-table tbody tr td.td-size { font-size: 11px; color: #9ca3af; }
       .doc-table tbody tr td.td-date { font-size: 11px; color: #9ca3af; }
@@ -786,9 +787,9 @@ tbody td {
         <thead>
           <tr>
             <th style="width:40px">#</th>
-            <th>タイトル ▼</th>
             <th style="width:170px">カテゴリ</th>
             <th style="width:140px">メーカー</th>
+            <th>タイトル ▼</th>
             <th style="width:80px">タグ</th>
             <th style="width:80px">サイズ</th>
             <th style="width:90px">更新日</th>
@@ -1836,9 +1837,9 @@ function renderTable(data) {
     const tagHtml = d.tp === '施工マニュアル' ? '<span class="tag-badge">施工M</span>' : '';
     tr.innerHTML = `
       <td class="td-num">${i+1}</td>
-      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span></td>
       <td><span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span></td>
       <td class="td-manufacturer">${d.m || '–'}</td>
+      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span></td>
       <td>${tagHtml}</td>
       <td class="td-size">${d.s}</td>
       <td class="td-date">${d.d || "-"}</td>
