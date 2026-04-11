@@ -42,7 +42,7 @@
     .ai-chat-bar .ai-footer{font-size:11px;color:#64748b;text-align:center;}
 
     /* ===== Right Panel ===== */
-    .ai-panel{position:fixed;top:0;right:0;bottom:0;width:400px;z-index:9997;
+    .ai-panel{position:fixed;top:0;right:0;bottom:110px;width:400px;z-index:9997;
       background:#1e293b;border-left:1px solid #334155;display:flex;flex-direction:column;
       transform:translateX(100%);transition:transform .3s ease;}
     .ai-panel.vis{transform:translateX(0);}
