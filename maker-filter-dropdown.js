@@ -19,7 +19,7 @@
 
   function injectStyles() {
     const css = `
-.maker-dropdown-wrap { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; }
+.maker-dropdown-wrap { position: relative; display: block; margin: 10px 0 6px 0; }
 .maker-dropdown-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; font-size: 12px; font-weight: 600; border: 1.5px solid #e67e22; border-radius: 6px; background: #e67e22; color: #fff; cursor: pointer; transition: background .2s; white-space: nowrap; user-select: none; }
 .maker-dropdown-btn:hover { background: #cf6d17; border-color: #cf6d17; }
 .maker-dropdown-btn .arrow { font-size: 10px; transition: transform .2s; }
@@ -76,7 +76,7 @@
     wrap.className = 'maker-dropdown-wrap';
     const triggerBtn = document.createElement('button');
     triggerBtn.className = 'maker-dropdown-btn';
-    triggerBtn.innerHTML = '\u003cspan\u003eメーカーフィルター\u003c/span\u003e \u003cspan class="maker-badge" id="maker-badge"\u003eALL\u003c/span\u003e \u003cspan class="arrow"\u003e▼\u003c/span\u003e';
+    triggerBtn.innerHTML = '<span>メーカーフィルター</span> <span class="maker-badge" id="maker-badge">ALL</span> <span class="arrow">▼</span>';
     wrap.appendChild(triggerBtn);
 
     const panel = document.createElement('div');
@@ -181,7 +181,7 @@
         const x = document.createElement('span');
         x.className = 'maker-tag-x';
         x.dataset.m = maker;
-        x.innerHTML = '×';
+        x.innerHTML = '&times;';
         tag.textContent = maker + ' ';
         tag.appendChild(x);
         tagArea.appendChild(tag);
