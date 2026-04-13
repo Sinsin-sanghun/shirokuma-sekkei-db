@@ -69,6 +69,8 @@
 
     const selectedMakers = new Set();
     toolbar.style.display = 'none';
+    const toggleBtn = document.querySelector('.toolbar-toggle');
+    if (toggleBtn) toggleBtn.style.display = 'none';
 
     const wrap = document.createElement('div');
     wrap.className = 'maker-dropdown-wrap';
