@@ -902,8 +902,8 @@ tbody td {
             <th style="width:40px">#</th>
             <th style="width:140px">カテゴリ</th>
             <th style="width:120px">メーカー</th>
-            <th>タイトル ▼</th>
             <th style="width:160px">型番</th>
+            <th>タイトル ▼</th>
             <th style="width:200px">主要スペック</th>
             <th style="width:110px">用途</th>
             <th style="width:70px">タグ</th>
@@ -1807,6 +1807,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('searchInput').addEventListener('keypress', e => {
     if (e.key === 'Enter') document.getElementById('searchBtn').click();
   });
+  // Live search: clear input → auto revert; typing → real-time filter
+  document.getElementById('searchInput').addEventListener('input', e => {
+    const v = e.target.value;
+    // When cleared (or whenever typing), auto-update the view
+    state.search = v;
+    if (v === '') {
+      state.category = 'すべて';
+      state.manufacturer = 'すべて';
+      buildSidebar(); buildToolbar();
+    }
+    renderView();
+  });
   document.getElementById('aiSendBtn').onclick = performAI;
   document.getElementById('aiInput').addEventListener('keypress', e => {
     if (e.key === 'Enter') performAI();
@@ -1976,14 +1988,14 @@ function renderTable(data) {
       <td class="td-num">${i+1}</td>
       <td><span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span></td>
       <td class="td-manufacturer">${d.m || '–'}</td>
-      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span></td>
       <td>${modelHtml}</td>
+      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}','${(d.f||'').replace(/'/g,"&#39;")}')">${d.t}</span></td>
       <td>${specsHtml}</td>
       <td>${purposeHtml}</td>
       <td>${tagHtml}</td>
       <td class="td-size">${d.s}</td>
       <td class="td-date">${d.d || "-"}</td>
-      <td><button class="btn-open" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">開く</button></td>
+      <td><button class="btn-open" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}','${(d.f||'').replace(/'/g,"&#39;")}')">開く</button></td>
     `;
     tbody.appendChild(tr);
   });
@@ -2016,7 +2028,7 @@ function renderCards(data) {
   data.forEach(d => {
     const card = document.createElement('div');
     card.className = 'card';
-    card.onclick = () => openPDF(d.r || d.f, d.t);
+    card.onclick = () => openPDF(d.r || d.f, d.t, d.f);
     const meta = (typeof window.getItemMeta === 'function') ? window.getItemMeta(d.r, d.f) : null;
     const metaHtml = buildMetaHtml(meta, 'card-meta-info');
     card.innerHTML = `
@@ -2118,7 +2130,7 @@ const pdfMap = {
 "7_連系点/富士電機_電力量計.pdf":"0770.pdf"
 };
 
-function openPDF(relPath, title) {
+function openPDF(relPath, title, filename) {
   if (/^\d{4}\.pdf$/.test(relPath)) {
     currentPdfPath = SUPABASE_STORAGE + '/' + relPath;
   } else {
@@ -2134,9 +2146,20 @@ function openPDF(relPath, title) {
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('pdfFrame').src = currentPdfPath;
 
-  // Show 3-line summary banner at top of PDF viewer
+  // Show 3-line summary banner at top of PDF viewer.
+  // If filename not supplied (older callers), try to find it from docsData by relPath.
   const banner = document.getElementById('pdfSummaryBanner');
-  const meta = (typeof window.getItemMeta === 'function') ? window.getItemMeta(relPath, title) : null;
+  let meta = null;
+  if (typeof window.getItemMeta === 'function') {
+    // Try direct lookup
+    meta = window.getItemMeta(relPath, filename || '');
+    // Fallback: resolve filename/relpath from docsData
+    if (!meta && typeof docsData !== 'undefined') {
+      const decRel = (function(){ try { return decodeURI(relPath); } catch(e){ return relPath; } })();
+      const row = docsData.find(x => x.f === relPath || x.f === decRel || encodeURI(x.r || '') === relPath || x.r === decRel || x.t === title);
+      if (row) meta = window.getItemMeta(row.r, row.f);
+    }
+  }
   if (banner) {
     if (meta && meta.summary) {
       banner.textContent = meta.summary;
@@ -2216,7 +2239,7 @@ function performAI() {
     scored.forEach(item => {
       const div = document.createElement('div');
       div.className = 'ai-result-item';
-      div.onclick = () => openPDF(item.d.r || item.d.f, item.d.t);
+      div.onclick = () => openPDF(item.d.r || item.d.f, item.d.t, item.d.f);
       div.innerHTML = `
         <div class="ai-result-title">${item.d.t}</div>
         <div class="ai-result-meta">${getCatLabel(item.d.c)} | ${item.d.m || '–'} | ${item.d.s} | ${item.d.tp}</div>
