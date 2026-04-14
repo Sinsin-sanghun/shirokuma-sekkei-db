@@ -370,6 +370,37 @@ tbody td {
 }
 .td-title:hover { text-decoration: underline; }
 
+/* 3-line summary shown under title in table & cards */
+.row-summary {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.45;
+  white-space: pre-line;
+  max-width: 640px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card-summary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+  font-size: 11px;
+  color: #4b5563;
+  line-height: 1.5;
+  white-space: pre-line;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 768px) {
+  .row-summary { font-size: 10px; max-width: 100%; }
+  .card-summary { font-size: 10px; }
+}
+
 /* category tags - color-coded */
 .cat-tag {
   display: inline-block;
@@ -1844,11 +1875,13 @@ function renderTable(data) {
   data.forEach((d, i) => {
     const tr = document.createElement('tr');
     const tagHtml = d.tp === '施工マニュアル' ? '<span class="tag-badge">施工M</span>' : '';
+    const summary = (typeof window.getSummary === 'function') ? window.getSummary(d.r, d.f) : null;
+    const summaryHtml = summary ? `<div class="row-summary">${escapeHtml(summary)}</div>` : '';
     tr.innerHTML = `
       <td class="td-num">${i+1}</td>
       <td><span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span></td>
       <td class="td-manufacturer">${d.m || '–'}</td>
-      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span></td>
+      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span>${summaryHtml}</td>
       <td>${tagHtml}</td>
       <td class="td-size">${d.s}</td>
       <td class="td-date">${d.d || "-"}</td>
@@ -1858,6 +1891,16 @@ function renderTable(data) {
   });
 }
 
+// Small helper for safe HTML output of summaries (used by render functions)
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderCards(data) {
   const container = document.getElementById('cardView');
   container.innerHTML = '';
@@ -1865,6 +1908,8 @@ function renderCards(data) {
     const card = document.createElement('div');
     card.className = 'card';
     card.onclick = () => openPDF(d.r || d.f, d.t);
+    const summary = (typeof window.getSummary === 'function') ? window.getSummary(d.r, d.f) : null;
+    const summaryHtml = summary ? `<div class="card-summary">${escapeHtml(summary)}</div>` : '';
     card.innerHTML = `
       <div class="card-title">${d.t}</div>
       <div class="card-meta">
@@ -1872,6 +1917,7 @@ function renderCards(data) {
         <span class="card-manufacturer">${d.m || ''}</span>
         <span class="card-size">${d.s}</span>
       </div>
+      ${summaryHtml}
     `;
     container.appendChild(card);
   });
@@ -2152,6 +2198,7 @@ document.getElementById('excelBtn').addEventListener('click', () => {
 </script>
   <script src="plan-a-patch.js"></script>
   <script src="maker-filter-dropdown.js"></script>
+  <script src="summary-loader.js"></script>
 </body>
 </html>
 
