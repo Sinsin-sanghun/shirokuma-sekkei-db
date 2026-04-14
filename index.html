@@ -859,7 +859,7 @@ tbody td {
     .toolbar-toggle:hover { color: #fff; border-color: #5a6a7a; }
 </style>
 </head>
-<body>
+<body class="gap-fixed">
 
 <!-- ── HEADER ── -->
 <header class="header">
@@ -2343,6 +2343,25 @@ document.getElementById('excelBtn').addEventListener('click', () => {
   .main-header h2{font-size:14px!important;}
   .header-search{padding:6px 10px!important;}
   .header-search input{font-size:13px!important;padding:8px 10px!important;}
+}
+
+/* === GAP FIX === */
+body.gap-fixed { background: var(--sidebar-bg) !important; }
+.main { background: #f5f6f8 !important; }
+
+/* === C안: タグ 컬럼 숨기기 === */
+.table-container table th:nth-child(8),
+.table-container table td:nth-child(8) {
+  display: none !important;
+}
+
+/* 施工参考 표시를 위한 아이콘 스타일 (향후 확장용) */
+.constr-flag {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: .75;
+  cursor: help;
 }
 </style>
 <script>
