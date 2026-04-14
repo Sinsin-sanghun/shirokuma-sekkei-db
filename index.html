@@ -1931,6 +1931,13 @@ function mkSidebarItem(label, icon, catKey, count) {
     state.category = catKey;
     state.manufacturer = 'すべて';
     buildSidebar(); buildToolbar(); renderView();
+    // Auto-close sidebar on mobile (≤768px) after selecting a category
+    if (window.innerWidth <= 768) {
+      const sb = document.querySelector('.sidebar');
+      const ov = document.querySelector('.sidebar-overlay');
+      if (sb) sb.classList.remove('open');
+      if (ov) ov.classList.remove('show');
+    }
   };
   return div;
 }
