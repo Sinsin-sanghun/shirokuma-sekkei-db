@@ -1,47 +1,52 @@
 // ══════════════════════════════════════
-//  Summary Loader
-//  Fetches 3-line summaries from Supabase and makes them available
-//  for the list view renderers.
-//  ──────────────────────────────────────
-//  Exposes: window.getSummary(relPath, filename) => string | null
-//  Triggers renderView() after load so summaries appear once fetched.
+//  Metadata Loader (v2)
+//  Fetches model_number / key_specs / purpose / summary from Supabase
+//  Exposes: window.getItemMeta(relPath, filename) => {model, specs, purpose, summary} | null
+//  Backward-compat: window.getSummary(relPath, filename) => string | null
+//  Triggers renderView() after load.
 // ══════════════════════════════════════
 
 (function() {
   const SUPABASE_URL = 'https://manowprcyrfqonzdoqja.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hbm93cHJjeXJmcW9uemRvcWphIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMTU5NDIsImV4cCI6MjA4ODc5MTk0Mn0.eZ9UHW041t85kLBglI_CK6p0uX5dRVMbWyJO0oR50Kc';
 
-  // Internal lookup maps
   const byRelPath = new Map();
   const byFilename = new Map();
   let loaded = false;
 
-  // Public API: returns summary string or null
-  window.getSummary = function(relPath, filename) {
-    if (!loaded) return null;
-    if (relPath && byRelPath.has(relPath)) return byRelPath.get(relPath);
-    if (filename && byFilename.has(filename)) return byFilename.get(filename);
-    // Try decoded versions
+  function lookup(map, key) {
+    if (!key) return null;
+    if (map.has(key)) return map.get(key);
     try {
-      const decRel = decodeURI(relPath || '');
-      if (byRelPath.has(decRel)) return byRelPath.get(decRel);
+      const dec = decodeURI(key);
+      if (map.has(dec)) return map.get(dec);
     } catch (e) {}
     return null;
+  }
+
+  // Main API: returns full meta object or null
+  window.getItemMeta = function(relPath, filename) {
+    if (!loaded) return null;
+    return lookup(byRelPath, relPath) || lookup(byFilename, filename);
   };
 
-  // Fetch all rows that actually have summaries
-  async function fetchSummaries() {
+  // Backward compat: summary only
+  window.getSummary = function(relPath, filename) {
+    const m = window.getItemMeta(relPath, filename);
+    return m ? (m.summary || null) : null;
+  };
+
+  async function fetchAll() {
     try {
       const url = SUPABASE_URL + '/rest/v1/sekkei_documents'
-        + '?select=filename,relative_path,summary'
-        + '&summary=not.is.null';
+        + '?select=filename,relative_path,summary,model_number,key_specs,purpose'
+        + '&or=(summary.not.is.null,model_number.not.is.null,key_specs.not.is.null,purpose.not.is.null)';
       const headers = {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'Accept-Profile': 'public'
       };
 
-      // Paginate using Range headers (Supabase REST default cap is 1000)
       let offset = 0;
       const pageSize = 1000;
       let totalLoaded = 0;
@@ -53,37 +58,39 @@
           })
         });
         if (!resp.ok) {
-          console.warn('[summary-loader] fetch failed:', resp.status);
+          console.warn('[meta-loader] fetch failed:', resp.status);
           break;
         }
         const rows = await resp.json();
         if (!Array.isArray(rows) || rows.length === 0) break;
         rows.forEach(r => {
-          if (r.summary) {
-            if (r.relative_path) byRelPath.set(r.relative_path, r.summary);
-            if (r.filename) byFilename.set(r.filename, r.summary);
-          }
+          const meta = {
+            model:   r.model_number || null,
+            specs:   r.key_specs || null,
+            purpose: r.purpose || null,
+            summary: r.summary || null
+          };
+          if (r.relative_path) byRelPath.set(r.relative_path, meta);
+          if (r.filename) byFilename.set(r.filename, meta);
         });
         totalLoaded += rows.length;
         if (rows.length < pageSize) break;
         offset += pageSize;
       }
       loaded = true;
-      console.log('[summary-loader] loaded ' + totalLoaded + ' summaries');
+      console.log('[meta-loader] loaded ' + totalLoaded + ' items');
 
-      // Trigger re-render if page already rendered
       if (typeof window.renderView === 'function') {
         try { window.renderView(); } catch (e) { console.warn(e); }
       }
     } catch (err) {
-      console.error('[summary-loader] error:', err);
+      console.error('[meta-loader] error:', err);
     }
   }
 
-  // Start fetching as soon as possible (non-blocking)
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fetchSummaries);
+    document.addEventListener('DOMContentLoaded', fetchAll);
   } else {
-    fetchSummaries();
+    fetchAll();
   }
 })();

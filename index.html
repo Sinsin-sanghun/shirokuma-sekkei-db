@@ -370,35 +370,73 @@ tbody td {
 }
 .td-title:hover { text-decoration: underline; }
 
-/* 3-line summary shown under title in table & cards */
-.row-summary {
+/* ── Structured meta info (型番/スペック/用途) shown under title in table & cards ── */
+.row-meta, .card-meta-info {
   margin-top: 4px;
   font-size: 11px;
-  color: #6b7280;
-  line-height: 1.45;
-  white-space: pre-line;
-  max-width: 640px;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: #4b5563;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
 }
-.card-summary {
+.row-meta .mi, .card-meta-info .mi {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+.row-meta .mi-label, .card-meta-info .mi-label {
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.row-meta .mi-model, .card-meta-info .mi-model {
+  color: #1f2937;
+  font-weight: 600;
+  font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.row-meta .mi-specs, .card-meta-info .mi-specs { color: #374151; }
+.row-meta .mi-purpose, .card-meta-info .mi-purpose {
+  color: #2563eb;
+  font-weight: 500;
+}
+.card-meta-info {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed #e5e7eb;
-  font-size: 11px;
-  color: #4b5563;
-  line-height: 1.5;
-  white-space: pre-line;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  flex-direction: column;
+  gap: 4px;
 }
 @media (max-width: 768px) {
-  .row-summary { font-size: 10px; max-width: 100%; }
-  .card-summary { font-size: 10px; }
+  .row-meta, .card-meta-info { font-size: 10px; }
+}
+
+/* ── PDF modal: 3-line summary banner at top ── */
+.pdf-summary-banner {
+  padding: 12px 20px;
+  background: linear-gradient(to right, #eff6ff, #f0fdf4);
+  border-bottom: 2px solid #3b82f6;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #1e3a8a;
+  white-space: pre-line;
+  display: none;
+}
+.pdf-summary-banner.show { display: block; }
+.pdf-summary-banner::before {
+  content: '📋 概要';
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3b82f6;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
 }
 
 /* category tags - color-coded */
@@ -872,6 +910,7 @@ tbody td {
         <button class="btn-modal btn-close-modal" onclick="closeModal()">閉じる</button>
       </div>
     </div>
+    <div class="pdf-summary-banner" id="pdfSummaryBanner"></div>
     <div class="modal-body">
       <iframe id="pdfFrame" src=""></iframe>
     </div>
@@ -1875,13 +1914,13 @@ function renderTable(data) {
   data.forEach((d, i) => {
     const tr = document.createElement('tr');
     const tagHtml = d.tp === '施工マニュアル' ? '<span class="tag-badge">施工M</span>' : '';
-    const summary = (typeof window.getSummary === 'function') ? window.getSummary(d.r, d.f) : null;
-    const summaryHtml = summary ? `<div class="row-summary">${escapeHtml(summary)}</div>` : '';
+    const meta = (typeof window.getItemMeta === 'function') ? window.getItemMeta(d.r, d.f) : null;
+    const metaHtml = buildMetaHtml(meta, 'row-meta');
     tr.innerHTML = `
       <td class="td-num">${i+1}</td>
       <td><span class="cat-tag ${getCatCss(d.c)}">${getCatLabel(d.c)}</span></td>
       <td class="td-manufacturer">${d.m || '–'}</td>
-      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span>${summaryHtml}</td>
+      <td><span class="td-title" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}')">${d.t}</span>${metaHtml}</td>
       <td>${tagHtml}</td>
       <td class="td-size">${d.s}</td>
       <td class="td-date">${d.d || "-"}</td>
@@ -1889,6 +1928,17 @@ function renderTable(data) {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// Build compact meta info HTML (型番 / スペック / 用途)
+function buildMetaHtml(meta, wrapperClass) {
+  if (!meta) return '';
+  const parts = [];
+  if (meta.model)   parts.push(`<span class="mi"><span class="mi-label">型番</span><span class="mi-model">${escapeHtml(meta.model)}</span></span>`);
+  if (meta.specs)   parts.push(`<span class="mi"><span class="mi-label">仕様</span><span class="mi-specs">${escapeHtml(meta.specs)}</span></span>`);
+  if (meta.purpose) parts.push(`<span class="mi"><span class="mi-label">用途</span><span class="mi-purpose">${escapeHtml(meta.purpose)}</span></span>`);
+  if (parts.length === 0) return '';
+  return `<div class="${wrapperClass}">${parts.join('')}</div>`;
 }
 
 // Small helper for safe HTML output of summaries (used by render functions)
@@ -1908,8 +1958,8 @@ function renderCards(data) {
     const card = document.createElement('div');
     card.className = 'card';
     card.onclick = () => openPDF(d.r || d.f, d.t);
-    const summary = (typeof window.getSummary === 'function') ? window.getSummary(d.r, d.f) : null;
-    const summaryHtml = summary ? `<div class="card-summary">${escapeHtml(summary)}</div>` : '';
+    const meta = (typeof window.getItemMeta === 'function') ? window.getItemMeta(d.r, d.f) : null;
+    const metaHtml = buildMetaHtml(meta, 'card-meta-info');
     card.innerHTML = `
       <div class="card-title">${d.t}</div>
       <div class="card-meta">
@@ -1917,7 +1967,7 @@ function renderCards(data) {
         <span class="card-manufacturer">${d.m || ''}</span>
         <span class="card-size">${d.s}</span>
       </div>
-      ${summaryHtml}
+      ${metaHtml}
     `;
     container.appendChild(card);
   });
@@ -2024,11 +2074,27 @@ function openPDF(relPath, title) {
   if (window.innerWidth <= 768) { window.open(currentPdfPath, '_blank'); return; }
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('pdfFrame').src = currentPdfPath;
+
+  // Show 3-line summary banner at top of PDF viewer
+  const banner = document.getElementById('pdfSummaryBanner');
+  const meta = (typeof window.getItemMeta === 'function') ? window.getItemMeta(relPath, title) : null;
+  if (banner) {
+    if (meta && meta.summary) {
+      banner.textContent = meta.summary;
+      banner.classList.add('show');
+    } else {
+      banner.textContent = '';
+      banner.classList.remove('show');
+    }
+  }
+
   document.getElementById('modalOverlay').classList.add('show');
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('show');
   document.getElementById('pdfFrame').src = '';
+  const banner = document.getElementById('pdfSummaryBanner');
+  if (banner) { banner.classList.remove('show'); banner.textContent = ''; }
 }
 function openNewTab() { if(currentPdfPath) window.open(currentPdfPath, '_blank'); }
 function getSupabasePdfUrl(relPath) {
