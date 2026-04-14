@@ -904,12 +904,10 @@ tbody td {
             <th style="width:120px">メーカー</th>
             <th style="width:160px">型番</th>
             <th>タイトル ▼</th>
-            <th style="width:200px">主要スペック</th>
+            <th style="width:220px">主要スペック</th>
             <th style="width:110px">用途</th>
             <th style="width:70px">タグ</th>
-            <th style="width:75px">サイズ</th>
-            <th style="width:85px">更新日</th>
-            <th style="width:65px">PDF</th>
+            <th style="width:90px">更新日</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -1993,9 +1991,7 @@ function renderTable(data) {
       <td>${specsHtml}</td>
       <td>${purposeHtml}</td>
       <td>${tagHtml}</td>
-      <td class="td-size">${d.s}</td>
       <td class="td-date">${d.d || "-"}</td>
-      <td><button class="btn-open" onclick="openPDF('${d.r ? encodeURI(d.r) : d.f}','${d.t.replace(/'/g,"&#39;")}','${(d.f||'').replace(/'/g,"&#39;")}')">開く</button></td>
     `;
     tbody.appendChild(tr);
   });
