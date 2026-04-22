@@ -3,7 +3,7 @@ h<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>設計・工事チーム - 部材情報DB しろくま</title>
+<title>施工マニュアル・仕様書DB しろくま</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -865,7 +865,7 @@ tbody td {
 <header class="header">
   <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">&#9776;</button>
   <div class="header-logo">
-    設計・工事チーム - 部材情報DB<span>しろくま</span>
+    施工マニュアル・仕様書DB<span>しろくま</span>
   </div>
   <div class="header-search">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -2299,7 +2299,7 @@ document.getElementById('excelBtn').addEventListener('click', () => {
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '部材情報DB_export.csv';
+  a.download = '施工マニュアル・仕様書DB_export.csv';
   a.click();
 });
 
