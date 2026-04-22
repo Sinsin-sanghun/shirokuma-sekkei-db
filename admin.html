@@ -38,8 +38,9 @@
     tr:hover td{background:rgba(255,255,255,.02)}
     select,input[type=text],input[type=email],input[type=number]{background:#0f1219;border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;font-family:inherit}
     input:focus,select:focus{outline:none;border-color:var(--accent)}
-    .add-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:center}
-    @media (max-width:640px){.add-row{grid-template-columns:1fr}}
+    .add-emails{width:100%;min-height:120px;resize:vertical;font-family:inherit;line-height:1.5}
+    .add-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;margin-top:12px}
+    @media (max-width:640px){.add-controls{grid-template-columns:1fr}}
     .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;background:var(--panel);border:1px solid var(--border);font-size:13px;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
     .toast.show{opacity:1}
     .toast.error{border-color:var(--danger);color:var(--danger)}
@@ -109,22 +110,23 @@
 
     <div class="card">
       <h1>➕ 新規ユーザー追加</h1>
-      <h2>新しいユーザーにアクセス権限を付与</h2>
+      <h2>新しいユーザーにアクセス権限を付与（複数一括追加可）</h2>
       <div class="divider"></div>
-      <div class="add-row">
-        <input type="email" id="new-email" placeholder="メールアドレス (例: user@shirokumapower.com)">
+      <textarea id="new-emails" class="add-emails" placeholder="メールアドレスを改行またはカンマで区切って入力&#10;例:&#10;user1@shirokumapower.com&#10;user2@shirokumapower.com&#10;user3@shirokumapower.com"></textarea>
+      <div class="add-controls">
         <select id="new-role">
           <option value="viewer">viewer (閲覧)</option>
           <option value="editor">editor (編集)</option>
           <option value="admin">admin (管理)</option>
         </select>
         <input type="number" id="new-price" placeholder="価格レベル" value="1" min="1" max="5">
-        <button class="btn btn-primary" id="add-btn">追加</button>
+        <button class="btn btn-primary" id="add-btn">一括追加</button>
       </div>
       <p class="muted" style="margin-top:12px">
         <strong>viewer</strong>: データ閲覧のみ &nbsp;|&nbsp;
         <strong>editor</strong>: データ編集可 &nbsp;|&nbsp;
-        <strong>admin</strong>: 全権限
+        <strong>admin</strong>: 全権限<br>
+        ※ 改行・カンマ・セミコロンで区切って複数入力可能。権限と価格レベルは全員に同じ値が適用されます。
       </p>
     </div>
   </div>
@@ -248,19 +250,53 @@ async function delUser(email) {
   await loadUsers();
 }
 
-async function addUser() {
-  const email = $('new-email').value.trim().toLowerCase();
+async function addUsers() {
+  const raw = $('new-emails').value;
+  // 改行・カンマ・セミコロンで区切ってメールを抽出、重複排除
+  const emails = [...new Set(
+    raw.split(/[\n,;]+/).map(s => s.trim().toLowerCase()).filter(s => s && s.includes('@'))
+  )];
+  if (emails.length === 0) return toast('有効なメールアドレスを入力してください', 'error');
+
   const role = $('new-role').value;
   const price_level = parseInt($('new-price').value, 10) || 1;
 
-  if (!email || !email.includes('@')) return toast('有効なメールアドレスを入力', 'error');
+  const addBtn = $('add-btn');
+  addBtn.disabled = true;
+  addBtn.textContent = `追加中 (0/${emails.length})`;
 
-  const { error } = await sb.from('user_roles').insert({ email, role, price_level });
-  if (error) return toast('追加失敗: ' + error.message, 'error');
-  toast(`${email} を追加しました`);
-  $('new-email').value = '';
-  $('new-price').value = '1';
-  await loadUsers();
+  const success = [];
+  const failed = [];
+  for (let i = 0; i < emails.length; i++) {
+    const email = emails[i];
+    const { error } = await sb.from('user_roles').insert({ email, role, price_level });
+    if (error) {
+      failed.push({ email, msg: error.message });
+    } else {
+      success.push(email);
+    }
+    addBtn.textContent = `追加中 (${i + 1}/${emails.length})`;
+  }
+
+  addBtn.disabled = false;
+  addBtn.textContent = '一括追加';
+
+  if (failed.length === 0) {
+    toast(`✅ ${success.length} 件すべて追加しました`);
+  } else if (success.length === 0) {
+    toast(`❌ 全 ${failed.length} 件失敗: ${failed[0].msg}`, 'error');
+  } else {
+    toast(`成功 ${success.length} 件 / 失敗 ${failed.length} 件 (詳細はコンソール)`, 'error');
+  }
+  if (failed.length > 0) {
+    console.warn('[追加失敗リスト]');
+    failed.forEach(f => console.warn(`  ${f.email} → ${f.msg}`));
+  }
+
+  if (success.length > 0) {
+    $('new-emails').value = '';
+    await loadUsers();
+  }
 }
 
 $('google-login').onclick = async () => {
@@ -272,7 +308,7 @@ $('google-login').onclick = async () => {
 
 $('logout-btn').onclick = async () => { await sb.auth.signOut(); window.location.reload(); };
 $('denied-logout').onclick = async () => { await sb.auth.signOut(); window.location.reload(); };
-$('add-btn').onclick = addUser;
+$('add-btn').onclick = addUsers;
 
 // SIGNED_OUT만 reload 처리. SIGNED_IN은 init()이 이미 처리 중이므로 무한 리로드 방지를 위해 제외.
 sb.auth.onAuthStateChange((event) => {
