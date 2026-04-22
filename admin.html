@@ -274,8 +274,9 @@ $('logout-btn').onclick = async () => { await sb.auth.signOut(); window.location
 $('denied-logout').onclick = async () => { await sb.auth.signOut(); window.location.reload(); };
 $('add-btn').onclick = addUser;
 
+// SIGNED_OUT만 reload 처리. SIGNED_IN은 init()이 이미 처리 중이므로 무한 리로드 방지를 위해 제외.
 sb.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+  if (event === 'SIGNED_OUT') {
     window.location.reload();
   }
 });
